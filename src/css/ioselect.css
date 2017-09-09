@@ -1,0 +1,62 @@
+.ioselect-hidden{
+	display: none;
+}
+.ioselect-container{
+	position: relative;
+	overflow: hidden;
+}
+/*
+DO NOT APPLY ANY MARGIN VALUE TO SELECT
+This might cause an issue positioning the dropdown
+If you need margin, apply it to the container instead.
+*/
+.ioselect-select{
+	border: 1px solid grey;
+	min-height: 1rem;
+	padding-right: 40px;
+}
+.ioselect-select .ioselect-selected-item{
+	display: inline-block;
+	border: 1px solid grey;
+	margin: 1px 1px 1px 0;
+	padding: 3px 5px;
+}
+.ioselect-dropdown{
+	position: absolute;
+	max-height: 60vh;
+	top: 0;
+	left: 0;
+	background-color: white;
+	border: 1px solid gray;
+	overflow: hidden;
+	overflow-y: auto;
+	-webkit-overflow-scrolling: touch;
+	z-index: 10000;
+}
+.ioselect-dropdown ul{
+	margin: 0;
+	list-style: none;
+	padding: 0;
+}
+.ioselect-dropdown ul li{
+	cursor: default;
+}
+.ioselect-dropdown ul li:hover{
+	background-color: blue;
+	color: white;
+}
+.ioselect-drop-up{
+	transform: translateY( -100% );
+}
+.ioselect-dropdown:not(.ioselect-open) {
+	display: none;
+}
+
+.ioselect-mask{
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100vh;
+	z-index: 9000;
+}
