@@ -1,16 +1,21 @@
+// TODO: display dropdown fullscreen on mobile
 // TODO: keyboard navigation
 // TODO: disabled select element
-// TODO: disabled option
 // TODO: disable search
-// TODO: disable search based on number of items
 // TODO: destroy
 // TODO: events
+// TODO: OPTGROUP support
+// TODO: break up source code, create minified version
+// TODO: separate CSS into base + theme
+// TODO: package as module
 
 // Possible features...
+// TODO: disable search based on number of items
 // TODO: No results text
 // TODO: limit number of selections in select multiple
 // TODO: focus on label click
 // TODO: deselect on single select (i.e. set to first blank option)?
+
 
 var ioselect = function( element ){
 	this.addClass( element, 'ioselect-hidden' );
@@ -35,7 +40,7 @@ var ioselect = function( element ){
 	);
 	this.element.addEventListener(
 		'change',
-		this.UpdateSelect.bind(this)
+		this.Update.bind(this)
 	);
 	// Update the text showing in the select area
 	this.UpdateSelect();
@@ -47,11 +52,12 @@ var ioselect = function( element ){
 	if( typeof MutationObserver != 'undefined' ){
 		// Listen for changes (e.g. add/remove options) and trigger an update
 		new MutationObserver(
-			this.BuildDropdown.bind( this )
+			this.SelectMutated.bind( this )
 		).observe(
 			this.element,
 			{
-				childList: true
+				childList: true,
+				attributes: true
 			}
 		);
 	}
@@ -74,11 +80,29 @@ var ioselect = function( element ){
 
 	this.scroll_listener = function(event){this.HideDropdown();}.bind(this);
 }
-
+ioselect.prototype.SelectMutated = function( mutations ){
+	for( var i = 0; i < mutations.length; i++ ){
+		switch( mutations[i].type ){
+			case 'childList':{
+				this.HideDropdown();
+				this.Update();
+				break;
+			}
+			case 'attributes':{
+				this.HideDropdown();
+				this.UpdateSelect();
+				break;
+			}
+		}
+	}
+}
 /**
  * An option in the dropdown has been clicked
  */
 ioselect.prototype.ClickSelect = function( event ){
+	if( this.hasClass( this.container, 'ioselect-disabled' ) ){
+		return;
+	}
 	if( this.hasClass( this.container, 'ioselect-open' ) ){
 		this.HideDropdown();
 	} else {
@@ -189,6 +213,9 @@ ioselect.prototype.ListenForKeyPress = function( event ){
  * An option was clicked
  */
 ioselect.prototype.ClickOption = function( event ){
+	if( this.hasClass( event.target, 'ioselect-selected' ) || this.hasClass( event.target, 'ioselect-disabled' ) ){
+		return;
+	}
 	var option = this.closest( event.target, '.ioselect-option' );
 	if( option === null ){
 		return;
@@ -206,6 +233,7 @@ ioselect.prototype.ClickOption = function( event ){
                 options[ o ].selected = true;
             }
         }
+		this.addClass( event.target, 'ioselect-selected' );
     } else {
         var options = this.element.querySelectorAll( 'option[value="' + value.toString()  + '"]' );
         for( var o = 0; o < options.length; o++ ){
@@ -221,7 +249,9 @@ ioselect.prototype.ClickOption = function( event ){
 ioselect.prototype.RemoveSelectedItem = function( event ){
 	event.stopPropagation();
 	var index = Array.prototype.indexOf.call(event.target.parentNode.childNodes, event.target);
-	this.element.querySelectorAll( 'option:checked' )[ index ].selected = false;
+	var option = this.element.querySelectorAll( 'option:checked' )[ index ]
+	option.selected = false;
+	this.removeClass( this.list.querySelector( '[data-value="' + option.value + '"]' ), 'ioselect-selected' );
 	this.trigger( this.element, 'change' );
 }
 /**
@@ -242,7 +272,15 @@ ioselect.prototype.BuildDropdown = function(){
 				continue;
 			}
 		}
-		options_html += '<li class="ioselect-option" data-value="' + option.value + '">' + option.text+ '</li>';
+		var disabled = '';
+		if( option.getAttribute( 'disabled' ) !== null ){
+			disabled = ' ioselect-disabled'
+		}
+		var selected = '';
+		if( option.selected ){
+			selected = ' ioselect-selected';
+		}
+		options_html += '<li class="ioselect-option' + disabled + selected + '" data-value="' + option.value + '">' + option.text+ '</li>';
 	}
 	this.list.innerHTML = options_html;
 	// Listen for click
@@ -253,6 +291,10 @@ ioselect.prototype.BuildDropdown = function(){
 	this.UpdateSelect();
 
 	this.dropdown_built = true;
+}
+ioselect.prototype.Update = function(){
+	this.dropdown_built = false;
+	this.UpdateSelect();
 }
 /**
  * Update the text shown in the select area
@@ -277,6 +319,9 @@ ioselect.prototype.UpdateSelect = function(){
 			var selected = this.element.querySelectorAll( 'option' );
 		}
 		this.select.innerText = selected.item(0).innerText;
+	}
+	if( this.element.disabled ){
+		this.addClass( this.container, 'ioselect-disabled' );
 	}
 }
 /**

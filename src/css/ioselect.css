@@ -1,5 +1,5 @@
 .ioselect-hidden{
-	display: none;
+	/*display: none;*/
 }
 .ioselect-container{
 	position: relative;
@@ -14,6 +14,10 @@ If you need margin, apply it to the container instead.
 	border: 1px solid grey;
 	min-height: 1rem;
 	padding-right: 40px;
+}
+.ioselect-container.ioselect-disabled .ioselect-select{
+	color: #aaa;
+	border-color: #bbb;
 }
 .ioselect-select .ioselect-selected-item{
 	display: inline-block;
@@ -41,7 +45,14 @@ If you need margin, apply it to the container instead.
 .ioselect-dropdown ul li{
 	cursor: default;
 }
-.ioselect-dropdown ul li:hover{
+.ioselect-dropdown ul li.ioselect-disabled{
+	color: #ccc;
+}
+.ioselect-dropdown ul li.ioselect-selected{
+	background-color: #bbb;
+	color: white;
+}
+.ioselect-dropdown ul li:not(.ioselect-disabled):not(.ioselect-selected):hover{
 	background-color: blue;
 	color: white;
 }
