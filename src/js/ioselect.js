@@ -8,6 +8,7 @@
 // TODO: break up source code, create minified version
 // TODO: separate CSS into base + theme
 // TODO: package as module
+// TODO: handle selectors, collections (e.g. jQuery) for initialisation
 
 // Possible features...
 // TODO: disable search based on number of items
@@ -17,7 +18,13 @@
 // TODO: deselect on single select (i.e. set to first blank option)?
 
 
+/**
+var viewportmeta = document.querySelector('meta[name="viewport"]');
+   viewportmeta.content = 'user-scalable=NO, width=device-width, initial-scale=1.0'
+*/
+
 var ioselect = function( element ){
+
 	this.addClass( element, 'ioselect-hidden' );
 	this.element = element;
 	var container = this.create( '<div class="ioselect-container"><div class="ioselect-select"></div><div class="ioselect-dropdown"><input tabindex="-1" type="text" class="ioselect-search"  autocorrect="off" autocapitalize="off"><ul></ul></div>' );
@@ -75,10 +82,12 @@ var ioselect = function( element ){
 	this.keypress_listener = this.ListenForKeyPress.bind(this);
 	// Listen for typing in search input box
 	this.search_listener = this.Search.bind(this);
+	// Listen for typing in search input box
+	this.scroll_listener = this.Scroll.bind(this);
 	// Stores a delay when updating dropdown due to search filter change
 	this.search_timeout = null;
 
-	this.scroll_listener = function(event){this.HideDropdown();}.bind(this);
+	//this.scroll_listener = function(event){this.HideDropdown();}.bind(this);
 }
 ioselect.prototype.SelectMutated = function( mutations ){
 	for( var i = 0; i < mutations.length; i++ ){
@@ -114,14 +123,57 @@ ioselect.prototype.ClickSelect = function( event ){
  */
 ioselect.prototype.ShowDropdown = function( event ){
 	// We delay creating the dropdown until it's  first opened
-	// But it only happens once (unless you search filter text is changed)
+	// But it only happens once (unless the search filter text is changed)
 	if( !this.dropdown_built ){
 		this.BuildDropdown();
 	}
-	var position = this.position( this.container );
-	var top = position.top + this.select.offsetHeight;
 
-	this.dropdown.style.top = top + 'px';
+	this.SetDropdownPosition();
+	viewportmeta = document.querySelector('meta[name="viewport"]');
+	this.current_meta = viewportmeta.content.split(',');
+	var new_meta = [];
+	for( var i = 0; i < this.current_meta.length; i++ ){
+		var parts = this.current_meta[ i ].split( '=' );
+		if( parts[ 0 ] != '' ){
+			new_meta.push( this.current_meta[ i ] );
+		}
+	}
+	new_meta.push( 'user-scalable=NO' );
+	viewportmeta.content = new_meta.join(',');
+
+	// Enable the mask (in case user clicks outside dropdown)
+	this.append( document.querySelector( 'body' ), this.mask );
+
+	// Listen for keypresses (escape, tab)
+	document.querySelector( 'body' ).addEventListener(
+		'keydown',
+		this.keypress_listener
+	);
+	// Listen for search input
+	this.search.addEventListener(
+		'input',
+		this.search_listener
+	);
+	this.scroll_listener_interval = setInterval(
+		this.scroll_listener,
+		10
+	)
+
+	// Hide the dropdown on scroll
+	var parent = this.element.parentNode;
+	// while( parent != null ){
+	// 	parent.addEventListener( 'scroll', this.scroll_listener );
+	// 	parent = parent.parentNode;
+	// }
+
+	this.list.scrollTop = 0;
+	this.dropdown.style.width = this.container.offsetWidth + 'px';
+}
+ioselect.prototype.SetDropdownPosition = function(){
+	var position = this.position( this.container );
+	this.current_top = position.top + this.select.offsetHeight;
+
+	this.dropdown.style.top = this.current_top + 'px';
 	this.dropdown.style.left = position.left + 'px';
 	this.addClass( this.container, 'ioselect-open' );
 	this.addClass( this.dropdown, 'ioselect-open' );
@@ -135,32 +187,16 @@ ioselect.prototype.ShowDropdown = function( event ){
 		this.dropdown.style.top = position.top + 'px';
 		this.addClass( this.dropdown, 'ioselect-drop-up' );
 	}
-
-	// Enable the mask (in case user clicks outside dropdown)
-	this.append( document.querySelector( 'body' ), this.mask );
-
-	// Listen for keypresses (escape, tab)
-	document.querySelector( 'body' ).addEventListener(
-		'keyup',
-		this.keypress_listener
-	);
-	// Listen for search input
-	this.search.addEventListener(
-		'keyup',
-		this.search_listener
-	);
-
-	// Hide the dropdown on scroll
-	var parent = this.element.parentNode;
-	while( parent != null ){
-		parent.addEventListener( 'scroll', this.scroll_listener );
-		parent = parent.parentNode;
-	}
 }
 /**
  * Hide the dropdown
  */
 ioselect.prototype.HideDropdown = function( event ){
+	clearInterval( this.scroll_listener_interval );
+
+	// Reset viewport meta
+	document.querySelector('meta[name="viewport"]').content = this.current_meta.join(',');
+
 	if( !this.hasClass( this.container, 'ioselect-open' ) ){
 		return;
 	}
@@ -191,10 +227,10 @@ ioselect.prototype.HideDropdown = function( event ){
 	// Don't bother to update the dropdown
 	this.ClearSearchTimeout();
 	var parent = this.element.parentNode;
-	while( parent != null ){
-		parent.removeEventListener( 'scroll', this.scroll_listener );
-		parent = parent.parentNode;
-	}
+	// while( parent != null ){
+	// 	parent.removeEventListener( 'scroll', this.scroll_listener );
+	// 	parent = parent.parentNode;
+	// }
 
 }
 /**
@@ -208,11 +244,21 @@ ioselect.prototype.ListenForKeyPress = function( event ){
 	){
 		this.HideDropdown();
 	}
+	if(
+		event.keyCode == 38 // Up
+		||
+		event.keyCode == 40 // Down
+	){
+console.log(1);
+		event.stopPropagation();
+		event.preventDefault();
+	}
 }
 /**
  * An option was clicked
  */
 ioselect.prototype.ClickOption = function( event ){
+	event.stopPropagation();
 	if( this.hasClass( event.target, 'ioselect-selected' ) || this.hasClass( event.target, 'ioselect-disabled' ) ){
 		return;
 	}
@@ -268,7 +314,7 @@ ioselect.prototype.BuildDropdown = function(){
 		var option = options[i];
 		// Filter?
 		if( this.filter.length > 0 ){
-			if( !(option.innerText.indexOf( this.filter ) === 0) ){
+			if( !(option.innerText.toLowerCase().indexOf( this.filter.toLowerCase() ) === 0) ){
 				continue;
 			}
 		}
@@ -291,6 +337,7 @@ ioselect.prototype.BuildDropdown = function(){
 	this.UpdateSelect();
 
 	this.dropdown_built = true;
+	this.list.scrollTop = 0;
 }
 ioselect.prototype.Update = function(){
 	this.dropdown_built = false;
@@ -347,6 +394,12 @@ ioselect.prototype.Search = function(){
 ioselect.prototype.ClearSearchTimeout = function(){
 	clearTimeout( this.search_timeout );
 	this.search_timeout = null;
+}
+ioselect.prototype.Scroll = function(){
+	// var position = this.position( this.container );
+	// if( this.current_top !== position.top + this.select.offsetHeight ){
+	// 	this.HideDropdown();
+	// }
 }
 ioselect.prototype.position = function( elem ){
 	var box = elem.getBoundingClientRect();

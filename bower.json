@@ -1,0 +1,16 @@
+{
+  "name": "ioSelect",
+  "homepage": "https://github.com/Taeon/ioSelect",
+  "description": "A customisable replacement for the <select> element",
+  "main": "src/js/ioselect.js",
+  "keywords": [
+    "javascript",
+    "select"
+  ],
+  "authors": [
+    "Pat Fox"
+  ],
+  "license": "MIT",
+  "ignore": [
+  ]
+}

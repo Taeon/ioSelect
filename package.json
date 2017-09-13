@@ -1,0 +1,8 @@
+{
+  "name": "Taeon-ioSelect",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/Taeon/ioSelect.git"
+  },
+  "license": "MIT"
+}

@@ -33,7 +33,6 @@ If you need margin, apply it to the container instead.
 	background-color: white;
 	border: 1px solid gray;
 	overflow: hidden;
-	overflow-y: auto;
 	-webkit-overflow-scrolling: touch;
 	z-index: 10000;
 }
@@ -41,6 +40,9 @@ If you need margin, apply it to the container instead.
 	margin: 0;
 	list-style: none;
 	padding: 0;
+	overflow: hidden;
+	overflow-y: auto;
+	height: 100%;
 }
 .ioselect-dropdown ul li{
 	cursor: default;
@@ -70,4 +72,16 @@ If you need margin, apply it to the container instead.
 	width: 100%;
 	height: 100vh;
 	z-index: 9000;
+}
+
+@media(max-width:767px){
+	.ioselect-dropdown{
+		position: fixed;
+		transform: none;
+		width: 94%;
+		height: 50%;
+		top: 3% !important;
+		left: 3% !important;
+		max-height: 94vh;
+	}
 }
