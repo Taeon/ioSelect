@@ -1,6 +1,4 @@
 // TODO: display dropdown fullscreen on mobile
-// TODO: keyboard navigation
-// TODO: disabled select element
 // TODO: disable search
 // TODO: destroy
 // TODO: events
@@ -9,6 +7,7 @@
 // TODO: separate CSS into base + theme
 // TODO: package as module
 // TODO: handle selectors, collections (e.g. jQuery) for initialisation
+// TODO: Optimise for file size
 
 // Possible features...
 // TODO: disable search based on number of items
@@ -27,11 +26,14 @@ var ioselect = function( element ){
 
 	this.addClass( element, 'ioselect-hidden' );
 	this.element = element;
-	var container = this.create( '<div class="ioselect-container"><div class="ioselect-select"></div><div class="ioselect-dropdown"><input tabindex="-1" type="text" class="ioselect-search"  autocorrect="off" autocapitalize="off"><ul></ul></div>' );
+	this.element.removeAttribute( 'tabindex' );
+	var multiple = ( typeof this.element.getAttribute( 'multiple' ) != 'undefined' && this.element.getAttribute( 'multiple' ) != null );
+	var container = this.create( '<div class="ioselect-container"><div class="ioselect-select ioselect-ns' + ((multiple)?' ioselect-multiple':'') + '"></div><div class="ioselect-dropdown"><div class="ioselect-search"><input tabindex="-1" type="text" class="ioselect-input" autocorrect="off" autocapitalize="off"></div><ul></ul></div>' );
 	this.after( element, container );
 
 	// The outer container for the replacement selector
 	this.container = element.parentNode.querySelector( '.ioselect-container' );
+
 	// The dropdown -- we'll build it later
 	this.dropdown = element.parentNode.querySelector( '.ioselect-dropdown' );
 	this.list = element.parentNode.querySelector( '.ioselect-dropdown ul' );
@@ -49,6 +51,19 @@ var ioselect = function( element ){
 		'change',
 		this.Update.bind(this)
 	);
+
+	// Update when the form is reset
+	this.closest( this.element, 'form' ).addEventListener( 'reset',
+		function() {
+			setTimeout(
+				function() {
+					this.Update();
+				}.bind( this ),
+				0
+			);
+		}.bind(this)
+	);
+
 	// Update the text showing in the select area
 	this.UpdateSelect();
 
@@ -84,10 +99,19 @@ var ioselect = function( element ){
 	this.search_listener = this.Search.bind(this);
 	// Listen for typing in search input box
 	this.scroll_listener = this.Scroll.bind(this);
+	// Listen for window resize
+	this.resize_listener = this.Resize.bind( this );
 	// Stores a delay when updating dropdown due to search filter change
 	this.search_timeout = null;
 
 	//this.scroll_listener = function(event){this.HideDropdown();}.bind(this);
+}
+ioselect.prototype.Resize = function(){
+	// To avoid roudning errors...
+	this.container.style.width = 'auto';
+	this.container.style.width = this.container.offsetWidth + 'px';
+	this.dropdown.style.width = this.container.offsetWidth + 'px';
+	this.SetDropdownPosition();
 }
 ioselect.prototype.SelectMutated = function( mutations ){
 	for( var i = 0; i < mutations.length; i++ ){
@@ -127,8 +151,8 @@ ioselect.prototype.ShowDropdown = function( event ){
 	if( !this.dropdown_built ){
 		this.BuildDropdown();
 	}
-
-	this.SetDropdownPosition();
+	this.current_selected = false;
+	window.addEventListener( 'resize', this.resize_listener );
 	viewportmeta = document.querySelector('meta[name="viewport"]');
 	this.current_meta = viewportmeta.content.split(',');
 	var new_meta = [];
@@ -167,24 +191,27 @@ ioselect.prototype.ShowDropdown = function( event ){
 	// }
 
 	this.list.scrollTop = 0;
-	this.dropdown.style.width = this.container.offsetWidth + 'px';
+
+	this.Resize();
 }
 ioselect.prototype.SetDropdownPosition = function(){
 	var position = this.position( this.container );
-	this.current_top = position.top + this.select.offsetHeight;
 
-	this.dropdown.style.top = this.current_top + 'px';
-	this.dropdown.style.left = position.left + 'px';
+	this.current_top = position.top;
+
+	this.dropdown.style.top = ( this.current_top + this.select.offsetHeight ).toString() + 'px';
+	this.dropdown.style.left = position.left.toString() + 'px';
 	this.addClass( this.container, 'ioselect-open' );
 	this.addClass( this.dropdown, 'ioselect-open' );
 
 	// See if it's dropping off the bottom of the screen
-	var dropdown_top = top - document.documentElement.scrollTop;
+	var dropdown_top = this.current_top - document.documentElement.scrollTop;
 	var dropdown_height = this.dropdown.offsetHeight;
 	var viewport_height = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);;
 	if ( dropdown_top + dropdown_height > viewport_height ) {
 		// Put it above the select
 		this.dropdown.style.top = position.top + 'px';
+		this.addClass( this.container, 'ioselect-select-up' );
 		this.addClass( this.dropdown, 'ioselect-drop-up' );
 	}
 }
@@ -193,15 +220,25 @@ ioselect.prototype.SetDropdownPosition = function(){
  */
 ioselect.prototype.HideDropdown = function( event ){
 	clearInterval( this.scroll_listener_interval );
+	window.removeEventListener( 'resize', this.resize_listener );
+	this.container.style.width = 'auto';
+	if( this.current_selected !== false ){
+		var current = this.list.querySelector( 'li:nth-child(' + (this.current_selected + 1).toString() + ')' );
+		this.removeClass( current, 'ioselect-current' );
+		this.current_selected = false;
+	}
 
 	// Reset viewport meta
-	document.querySelector('meta[name="viewport"]').content = this.current_meta.join(',');
+	if( this.current_meta ){
+		document.querySelector('meta[name="viewport"]').content = this.current_meta.join(',');
+	}
 
 	if( !this.hasClass( this.container, 'ioselect-open' ) ){
 		return;
 	}
 	// Remove classes
 	this.removeClass( this.container, 'ioselect-open' );
+	this.removeClass( this.container, 'ioselect-select-up' );
 	this.removeClass( this.dropdown, 'ioselect-open' );
 	this.removeClass( this.dropdown, 'ioselect-drop-up' );
 	// Hide the mask
@@ -237,21 +274,54 @@ ioselect.prototype.HideDropdown = function( event ){
  * Listen for any key pressed (while dropdown is open)
  */
 ioselect.prototype.ListenForKeyPress = function( event ){
+	var k = event.keyCode;
 	if(
-		event.keyCode == 27 // Escape
+		k == 27 // Escape
 		||
-		event.keyCode == 9 // Tab
+		k == 9 // Tab
 	){
 		this.HideDropdown();
 	}
 	if(
-		event.keyCode == 38 // Up
+		k == 38 // Up
 		||
-		event.keyCode == 40 // Down
+		k == 40 // Down
 	){
-console.log(1);
 		event.stopPropagation();
 		event.preventDefault();
+		if( k == 40 ){
+			if( this.current_selected === false ){
+				this.current_selected = 0;
+			} else {
+				if( this.current_selected + 1 >= this.list.querySelectorAll( 'li' ).length ){
+					return;
+				}
+				this.removeClass( this.list.querySelector( 'li:nth-child(' + (this.current_selected + 1).toString() + ')' ), 'ioselect-current' );
+				this.current_selected++;
+			}
+		} else {
+			if( this.current_selected === false || this.current_selected === 0 ){
+				return;
+			} else {
+				this.removeClass( this.list.querySelector( 'li:nth-child(' + (this.current_selected + 1).toString() + ')' ), 'ioselect-current' );
+				this.current_selected--;
+			}
+		}
+		var current = this.list.querySelector( 'li:nth-child(' + (this.current_selected + 1).toString() + ')' );
+		this.addClass( current, 'ioselect-current' );
+		// Make sure currently-selected item is in view
+		if( current.offsetTop - current.parentNode.scrollTop < 0 ){
+			current.parentNode.scrollTop = current.offsetTop;
+		} else if( current.offsetTop + current.offsetHeight > this.list.scrollTop + this.list.offsetHeight ) {
+			current.parentNode.scrollTop = (current.offsetTop + current.offsetHeight) - this.list.offsetHeight;
+		}
+	}
+	if(
+		k == 13 // Enter
+	){
+		if( this.current_selected !== false ){
+			this.list.querySelector( 'li:nth-child(' + (this.current_selected + 1).toString() + ')' ).click();
+		}
 	}
 }
 /**
@@ -269,6 +339,9 @@ ioselect.prototype.ClickOption = function( event ){
 	var value = option.getAttribute( 'data-value' );
 	// Update original select
 	if ( typeof this.element.getAttribute( 'multiple' ) != 'undefined' && this.element.getAttribute( 'multiple' ) != null ) {
+		if( value.length == 0 ){
+			return;
+		}
         // Convert string to array
         if ( Object.prototype.toString.call( value ) !== '[object Array]' ) {
             value = [value];
@@ -297,7 +370,9 @@ ioselect.prototype.RemoveSelectedItem = function( event ){
 	var index = Array.prototype.indexOf.call(event.target.parentNode.childNodes, event.target);
 	var option = this.element.querySelectorAll( 'option:checked' )[ index ]
 	option.selected = false;
-	this.removeClass( this.list.querySelector( '[data-value="' + option.value + '"]' ), 'ioselect-selected' );
+	if( this.dropdown_built ){
+		this.removeClass( this.list.querySelector( '[data-value="' + option.value + '"]' ), 'ioselect-selected' );
+	}
 	this.trigger( this.element, 'change' );
 }
 /**
@@ -326,7 +401,7 @@ ioselect.prototype.BuildDropdown = function(){
 		if( option.selected ){
 			selected = ' ioselect-selected';
 		}
-		options_html += '<li class="ioselect-option' + disabled + selected + '" data-value="' + option.value + '">' + option.text+ '</li>';
+		options_html += '<li class="ioselect-option ioselect-ns' + disabled + selected + '" data-value="' + option.value + '">' + option.text+ '</li>';
 	}
 	this.list.innerHTML = options_html;
 	// Listen for click
@@ -396,10 +471,10 @@ ioselect.prototype.ClearSearchTimeout = function(){
 	this.search_timeout = null;
 }
 ioselect.prototype.Scroll = function(){
-	// var position = this.position( this.container );
-	// if( this.current_top !== position.top + this.select.offsetHeight ){
-	// 	this.HideDropdown();
-	// }
+	var position = this.position( this.container );
+	if( this.current_top !== position.top ){
+		this.HideDropdown();
+	}
 }
 ioselect.prototype.position = function( elem ){
 	var box = elem.getBoundingClientRect();
@@ -431,7 +506,7 @@ ioselect.prototype.addClass = function( element, className ){
 	}
 }
 ioselect.prototype.removeClass = function( element, className ){
-	if (false && element.classList)
+	if (element.classList)
 	  element.classList.remove(className);
 	else
 	  element.className = element.className.replace(new RegExp('(^|\\b)' + className.split(' ').join('|') + '(\\b|$)', 'gi'), ' ');
@@ -467,14 +542,14 @@ ioselect.prototype.append = function( element, html ){
 		}
 	}
 }
-ioselect.prototype.trigger = function( element, event ){
+ioselect.prototype.trigger = function( element, event_name ){
 	if ("createEvent" in document) {
 	    var evt = document.createEvent("HTMLEvents");
-	    evt.initEvent( event, false, true);
+	    evt.initEvent( event_name, false, true);
 	    element.dispatchEvent(evt);
+	} else {
+		element.fireEvent(event_name);
 	}
-	else
-	    element.fireEvent(event);
 }
 
 // Taken from https://gist.github.com/mishschmid/6c5e53b86b624c120268ecc8f626114c

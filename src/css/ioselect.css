@@ -1,5 +1,5 @@
 .ioselect-hidden{
-	display: none;
+	display: none !important;
 }
 .ioselect-container{
 	position: relative;
@@ -11,7 +11,6 @@ This might cause an issue positioning the dropdown
 If you need margin, apply it to the container instead.
 */
 .ioselect-select{
-	border: 1px solid grey;
 	min-height: 1rem;
 	padding-right: 40px;
 }
@@ -21,20 +20,21 @@ If you need margin, apply it to the container instead.
 }
 .ioselect-select .ioselect-selected-item{
 	display: inline-block;
-	border: 1px solid grey;
-	margin: 1px 1px 1px 0;
-	padding: 3px 5px;
 }
 .ioselect-dropdown{
 	position: absolute;
-	max-height: 60vh;
 	top: 0;
 	left: 0;
 	background-color: white;
-	border: 1px solid gray;
 	overflow: hidden;
 	-webkit-overflow-scrolling: touch;
 	z-index: 10000;
+}
+.ioselect-dropdown .ioselect-search{
+	width: 100%;
+}
+.ioselect-dropdown input[type=text]{
+	width: 100%;
 }
 .ioselect-dropdown ul{
 	margin: 0;
@@ -42,7 +42,8 @@ If you need margin, apply it to the container instead.
 	padding: 0;
 	overflow: hidden;
 	overflow-y: auto;
-	height: 100%;
+	max-height: 300px;
+	position: relative;
 }
 .ioselect-dropdown ul li{
 	cursor: default;
@@ -73,6 +74,17 @@ If you need margin, apply it to the container instead.
 	height: 100vh;
 	z-index: 9000;
 }
+
+.ioselect-ns {
+  -webkit-touch-callout: none; /* iOS Safari */
+    -webkit-user-select: none; /* Safari */
+     -khtml-user-select: none; /* Konqueror HTML */
+       -moz-user-select: none; /* Firefox */
+        -ms-user-select: none; /* Internet Explorer/Edge */
+            user-select: none; /* Non-prefixed version, currently
+                                  supported by Chrome and Opera */
+}
+
 
 @media(max-width:767px){
 	.ioselect-dropdown{
