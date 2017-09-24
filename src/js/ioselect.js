@@ -1,5 +1,4 @@
 // TODO: display dropdown fullscreen on mobile
-// TODO: disable search
 // TODO: destroy
 // TODO: events
 // TODO: OPTGROUP support
@@ -52,15 +51,44 @@
 }(
     this,
     function () {
-		var ioselect = function( element ){
+		var ioselect = function( element, options ){
+
+            this.options = {
+                search_min: 0
+            }
 
 			$( element ).addClass( 'ioselect-hidden' );
 			this.element = $( element );
             this.is_multiple = typeof this.element[ 0 ].getAttribute( 'multiple' ) != 'undefined' && this.element[ 0 ].getAttribute( 'multiple' ) != null;
-            this.min = 0;
-            if( this.element[ 0 ].getAttribute( 'data-ioselect-search-min' ) != null ){
-                this.min = parseInt( this.element[ 0 ].getAttribute( 'data-ioselect-search-min' ) );
+            // // https://stackoverflow.com/questions/36971998/can-i-get-all-attributes-that-begin-with-on-using-jquery
+            // var options = [].slice.call(this.element[0].attributes).filter(function(attr) {
+            //     return attr && attr.name && attr.name.indexOf('data-ioselect') === 0
+            // }) )
+            // ;
+
+
+            this.options = {
+                search_min: 0,
+                search: true
+            };
+
+            // Overwrite options passed in on constructor
+            if( typeof options !== 'undefined' ){
+                for( var index in options ){
+                    this.options[ index ] = options[ index ];
+                }
             }
+
+            // Grab any options from the element
+            [].slice.call(this.element[0].attributes).filter(function(attr) {
+            	return attr && attr.name && attr.name.indexOf('data-ioselect-') === 0
+            }).forEach(function(attr) {
+            	this.options[attr.name.substr(14).replace( /\-/, '_' )] = attr.value;
+            }.bind(this));
+            this.options.search_min = parseInt( this.options.search_min );
+            this.options.search = this.options.search && this.options.search !== '0';
+
+            console.log(this.options)
 
 			this.element[ 0 ].removeAttribute( 'tabindex' );
 			var container = $( '<div class="ioselect-container"><div class="ioselect-select ioselect-ns' + ((this.multiple)?' ioselect-multiple':'') + '"></div><div class="ioselect-dropdown"><div class="ioselect-search"><input tabindex="-1" type="text" class="ioselect-input" autocorrect="off" autocapitalize="off"></div><ul></ul></div>' );
@@ -72,11 +100,6 @@
 
 			// The dropdown -- we'll build it later
 			this.dropdown = parent.find( '.ioselect-dropdown' )[0];
-            // Listen for click
-            $( this.dropdown ).on(
-                'click',
-                this.ClickOption.bind( this )
-            );
 
 			this.list = parent.find( '.ioselect-dropdown ul' )[0];
 			this.search = parent.find( '.ioselect-dropdown input[type=text]' )[ 0 ];
@@ -84,30 +107,6 @@
 
 			// The replacement select element
 			this.select = parent.find( '.ioselect-select' )[0];
-			// Listen for click
-			$( this.select ).on(
-				'click',
-				this.ClickSelect.bind(this)
-			);
-			this.element.on(
-				'change',
-				this.Update.bind(this)
-			);
-
-			// Update when the form is reset
-			this.element.closest( 'form' ).on(
-				'reset',
-				function() {
-					setTimeout(
-						function() {
-							this.Update();
-						}.bind( this ),
-						0
-					);
-				}.bind(this)
-			);
-
-			// Update the text showing in the select area
 
 			// We append this to the body because otherwise there are issues with
 			// clipping when the select is inside an element with overflow set
@@ -131,9 +130,45 @@
 			this.resize_listener = this.Resize.bind( this );
             // Listen for window resize
 			this.hide_dropdown = this.HideDropdown.bind( this );
+            // Listen for form reset
+            this.reset_listener = this.Reset.bind(this);
+            // Listen for item removed
+            this.remove_item_listener = this.RemoveSelectedItem.bind( this );
+            // Option clicked
+            this.click_option_listener = this.ClickOption.bind( this );
+            // Option clicked
+            this.click_select_listener = this.ClickSelect.bind(this);
+            // Element changed
+            this.element_changed_listener = this.Update.bind( this );
+
+            // Update when the form is reset
+			this.element.closest( 'form' ).on(
+				'reset',
+                this.reset_listener
+			);
+
+            // Listen for click
+            $( this.dropdown ).on(
+                'click',
+                this.click_option_listener
+            );
+
+            // Listen for click
+			$( this.select ).on(
+				'click',
+                this.click_select_listener
+			);
+
+            // Listen for original element change
+			this.element.on(
+				'change',
+				this.element_changed_listener
+			);
+
 			// Stores a delay when updating dropdown due to search filter change
 			this.search_timeout = null;
 
+            // Update the text showing in the select area
             this.UpdateSelect();
 			//this.scroll_listener = function(event){this.HideDropdown();}.bind(this);
 		}
@@ -185,6 +220,15 @@
 				this.dropdown.style.width = this.container.offsetWidth + 'px';
 				this.SetDropdownPosition();
 			},
+            Reset: function() {
+				setTimeout(
+					function() {
+						this.Update();
+					}.bind( this ),
+					0
+				);
+			},
+
 			/**
 			 * An option in the dropdown has been clicked
 			 */
@@ -235,7 +279,15 @@
 					this.keypress_listener
 				);
 
-                if( this.min > 0 && this.element.find( 'option' ).length < this.min ){
+                if(
+                    (
+                        this.options.search_min > 0
+                        &&
+                        this.element.find( 'option' ).length < this.options.search_min
+                    )
+                    ||
+                    !this.options.search
+                ){
                     // Listen for search input
     				$( this.search ).addClass( 'ioselect-hidden' );
                 } else {
@@ -503,7 +555,7 @@
 					this.select.innerHTML = values;
 					var items = $( this.select ).find( '.ioselect-selected-item' );
 					for( var i = 0; i < items.length; i++ ){
-						$( items[ i ] ).on( 'click', this.RemoveSelectedItem.bind( this ) );
+						$( items[ i ] ).on( 'click', this.remove_item_listener );
 					}
 				} else {
 					// None selected, use first
@@ -547,7 +599,26 @@
 				if( this.current_top !== position.top ){
 					this.HideDropdown();
 				}
-			}
+			},
+            Destroy:function(){
+                // Clear listeners
+                $( window ).off( 'resize', this.resize_listener );
+                $( this.mask ).off( 'click', this.hide_dropdown );
+				$( document.body ).off( 'keydown', this.keypress_listener );
+                $( this.search ).off( 'input', this.search_listener );
+                $( this.dropdown ).find( 'option' ).off( 'click', this.remove_item_listener );
+                $( this.dropdown ).off( 'click', this.click_option_listener );
+    			$( this.select ).off( 'click', this.click_select_listener );
+    			this.element.on( 'change', this.element_changed_listener );
+
+                // Remove element
+                this.container.remove();
+                this.dropdown.remove();
+                this.mask.remove();
+
+                // Show original element
+                this.element.removeClass( 'ioselect-hidden' );
+            }
 		}
 
 		return ioselect;
