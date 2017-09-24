@@ -3,14 +3,9 @@
 // TODO: destroy
 // TODO: events
 // TODO: OPTGROUP support
-// TODO: break up source code, create minified version
-// TODO: separate CSS into base + theme
-// TODO: package as module
-// TODO: handle selectors, collections (e.g. jQuery) for initialisation
 // TODO: Optimise for file size
 
 // Possible features...
-// TODO: disable search based on number of items
 // TODO: No results text
 // TODO: limit number of selections in select multiple
 // TODO: focus on label click
@@ -18,545 +13,548 @@
 
 
 /**
-var viewportmeta = document.querySelector('meta[name="viewport"]');
-   viewportmeta.content = 'user-scalable=NO, width=device-width, initial-scale=1.0'
-*/
+ * ioSelect
+ *
+ * A customisble replacement for the HTML select element
+ *
+ * See https://github.com/Taeon/ioSelect for docs
+ *
+ * The MIT License (MIT)
+ *
+ * Copyright (c) 2017 Patrick Fox
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+(function (root, factory) {
+    if (typeof define === "function" && define.amd) {
+        define([], factory);
+    } else if (typeof exports === "object") {
+        module.exports = factory();
+    } else {
+        root.ioselect = factory();
+    }
+}(
+    this,
+    function () {
+		var ioselect = function( element ){
 
-var ioselect = function( element ){
+			$( element ).addClass( 'ioselect-hidden' );
+			this.element = $( element );
+            this.is_multiple = typeof this.element[ 0 ].getAttribute( 'multiple' ) != 'undefined' && this.element[ 0 ].getAttribute( 'multiple' ) != null;
+            this.min = 0;
+            if( this.element[ 0 ].getAttribute( 'data-ioselect-search-min' ) != null ){
+                this.min = parseInt( this.element[ 0 ].getAttribute( 'data-ioselect-search-min' ) );
+            }
 
-	this.addClass( element, 'ioselect-hidden' );
-	this.element = element;
-	this.element.removeAttribute( 'tabindex' );
-	var multiple = ( typeof this.element.getAttribute( 'multiple' ) != 'undefined' && this.element.getAttribute( 'multiple' ) != null );
-	var container = this.create( '<div class="ioselect-container"><div class="ioselect-select ioselect-ns' + ((multiple)?' ioselect-multiple':'') + '"></div><div class="ioselect-dropdown"><div class="ioselect-search"><input tabindex="-1" type="text" class="ioselect-input" autocorrect="off" autocapitalize="off"></div><ul></ul></div>' );
-	this.after( element, container );
+			this.element[ 0 ].removeAttribute( 'tabindex' );
+			var container = $( '<div class="ioselect-container"><div class="ioselect-select ioselect-ns' + ((this.multiple)?' ioselect-multiple':'') + '"></div><div class="ioselect-dropdown"><div class="ioselect-search"><input tabindex="-1" type="text" class="ioselect-input" autocorrect="off" autocapitalize="off"></div><ul></ul></div>' );
+			$( container ).insertBefore( element );
 
-	// The outer container for the replacement selector
-	this.container = element.parentNode.querySelector( '.ioselect-container' );
+			// The outer container for the replacement selector
+			var parent = $( this.element[ 0 ].parentNode );
+			this.container = parent.find( '.ioselect-container' )[0];
 
-	// The dropdown -- we'll build it later
-	this.dropdown = element.parentNode.querySelector( '.ioselect-dropdown' );
-	this.list = element.parentNode.querySelector( '.ioselect-dropdown ul' );
-	this.search = element.parentNode.querySelector( '.ioselect-dropdown input[type=text]' );
-	this.dropdown_built = false;
+			// The dropdown -- we'll build it later
+			this.dropdown = parent.find( '.ioselect-dropdown' )[0];
+            // Listen for click
+            $( this.dropdown ).on(
+                'click',
+                this.ClickOption.bind( this )
+            );
 
-	// The replacement select element
-	this.select = element.parentNode.querySelector( '.ioselect-select' );
-	// Listen for click
-	this.select.addEventListener(
-		'click',
-		this.ClickSelect.bind(this)
-	);
-	this.element.addEventListener(
-		'change',
-		this.Update.bind(this)
-	);
+			this.list = parent.find( '.ioselect-dropdown ul' )[0];
+			this.search = parent.find( '.ioselect-dropdown input[type=text]' )[ 0 ];
+			this.dropdown_built = this.current_selected = false;
 
-	// Update when the form is reset
-	this.closest( this.element, 'form' ).addEventListener( 'reset',
-		function() {
-			setTimeout(
-				function() {
-					this.Update();
-				}.bind( this ),
-				0
+			// The replacement select element
+			this.select = parent.find( '.ioselect-select' )[0];
+			// Listen for click
+			$( this.select ).on(
+				'click',
+				this.ClickSelect.bind(this)
 			);
-		}.bind(this)
-	);
+			this.element.on(
+				'change',
+				this.Update.bind(this)
+			);
 
-	// Update the text showing in the select area
-	this.UpdateSelect();
+			// Update when the form is reset
+			this.element.closest( 'form' ).on(
+				'reset',
+				function() {
+					setTimeout(
+						function() {
+							this.Update();
+						}.bind( this ),
+						0
+					);
+				}.bind(this)
+			);
 
-	// We append this to the body because otherwise there are issues with
-	// clipping when the select is inside an element with overflow set
-	this.append( document.querySelector( 'body' ), this.dropdown );
+			// Update the text showing in the select area
 
-	if( typeof MutationObserver != 'undefined' ){
-		// Listen for changes (e.g. add/remove options) and trigger an update
-		new MutationObserver(
-			this.SelectMutated.bind( this )
-		).observe(
-			this.element,
-			{
-				childList: true,
-				attributes: true
-			}
-		);
-	}
+			// We append this to the body because otherwise there are issues with
+			// clipping when the select is inside an element with overflow set
+			$( document.body ).append( this.dropdown );
 
-	// The mask detects clicks outside the dropdown
-	this.mask = this.create( '<div class="ioselect-mask"></div>' ).item(0);
-	this.mask.addEventListener(
-		'click',
-		this.HideDropdown.bind( this )
-	);
 
-	// Search filter text
-	this.filter = '';
-	// Listen for keypress -- tracks if user presses escape or tab
-	this.keypress_listener = this.ListenForKeyPress.bind(this);
-	// Listen for typing in search input box
-	this.search_listener = this.Search.bind(this);
-	// Listen for typing in search input box
-	this.scroll_listener = this.Scroll.bind(this);
-	// Listen for window resize
-	this.resize_listener = this.Resize.bind( this );
-	// Stores a delay when updating dropdown due to search filter change
-	this.search_timeout = null;
+			// The mask detects clicks outside the dropdown
+			this.mask = $( '<div class="ioselect-mask"></div>' )[0];
 
-	//this.scroll_listener = function(event){this.HideDropdown();}.bind(this);
-}
-ioselect.prototype.Resize = function(){
-	// To avoid roudning errors...
-	this.container.style.width = 'auto';
-	this.container.style.width = this.container.offsetWidth + 'px';
-	this.dropdown.style.width = this.container.offsetWidth + 'px';
-	this.SetDropdownPosition();
-}
-ioselect.prototype.SelectMutated = function( mutations ){
-	for( var i = 0; i < mutations.length; i++ ){
-		switch( mutations[i].type ){
-			case 'childList':{
-				this.HideDropdown();
-				this.Update();
-				break;
-			}
-			case 'attributes':{
-				this.HideDropdown();
-				this.UpdateSelect();
-				break;
-			}
+			// Search filter text
+			this.filter = '';
+            this.mutation_listener = this.SelectMutated.bind( this );
+            this.Observe();
+			// Listen for keypress -- tracks if user presses escape or tab
+			this.keypress_listener = this.ListenForKeyPress.bind(this);
+			// Listen for typing in search input box
+			this.search_listener = this.Search.bind(this);
+			// Listen for typing in search input box
+			this.scroll_listener = this.Scroll.bind(this);
+			// Listen for window resize
+			this.resize_listener = this.Resize.bind( this );
+            // Listen for window resize
+			this.hide_dropdown = this.HideDropdown.bind( this );
+			// Stores a delay when updating dropdown due to search filter change
+			this.search_timeout = null;
+
+            this.UpdateSelect();
+			//this.scroll_listener = function(event){this.HideDropdown();}.bind(this);
 		}
-	}
-}
-/**
- * An option in the dropdown has been clicked
- */
-ioselect.prototype.ClickSelect = function( event ){
-	if( this.hasClass( this.container, 'ioselect-disabled' ) ){
-		return;
-	}
-	if( this.hasClass( this.container, 'ioselect-open' ) ){
-		this.HideDropdown();
-	} else {
-		this.ShowDropdown();
-	}
-}
-/**
- * Show the dropdown
- */
-ioselect.prototype.ShowDropdown = function( event ){
-	// We delay creating the dropdown until it's  first opened
-	// But it only happens once (unless the search filter text is changed)
-	if( !this.dropdown_built ){
-		this.BuildDropdown();
-	}
-	this.current_selected = false;
-	window.addEventListener( 'resize', this.resize_listener );
-	viewportmeta = document.querySelector('meta[name="viewport"]');
-	this.current_meta = viewportmeta.content.split(',');
-	var new_meta = [];
-	for( var i = 0; i < this.current_meta.length; i++ ){
-		var parts = this.current_meta[ i ].split( '=' );
-		if( parts[ 0 ] != '' ){
-			new_meta.push( this.current_meta[ i ] );
-		}
-	}
-	new_meta.push( 'user-scalable=NO' );
-	viewportmeta.content = new_meta.join(',');
-
-	// Enable the mask (in case user clicks outside dropdown)
-	this.append( document.querySelector( 'body' ), this.mask );
-
-	// Listen for keypresses (escape, tab)
-	document.querySelector( 'body' ).addEventListener(
-		'keydown',
-		this.keypress_listener
-	);
-	// Listen for search input
-	this.search.addEventListener(
-		'input',
-		this.search_listener
-	);
-	this.scroll_listener_interval = setInterval(
-		this.scroll_listener,
-		10
-	)
-
-	// Hide the dropdown on scroll
-	var parent = this.element.parentNode;
-	// while( parent != null ){
-	// 	parent.addEventListener( 'scroll', this.scroll_listener );
-	// 	parent = parent.parentNode;
-	// }
-
-	this.list.scrollTop = 0;
-
-	this.Resize();
-}
-ioselect.prototype.SetDropdownPosition = function(){
-	var position = this.position( this.container );
-
-	this.current_top = position.top;
-
-	this.dropdown.style.top = ( this.current_top + this.select.offsetHeight ).toString() + 'px';
-	this.dropdown.style.left = position.left.toString() + 'px';
-	this.addClass( this.container, 'ioselect-open' );
-	this.addClass( this.dropdown, 'ioselect-open' );
-
-	// See if it's dropping off the bottom of the screen
-	var dropdown_top = this.current_top - document.documentElement.scrollTop;
-	var dropdown_height = this.dropdown.offsetHeight;
-	var viewport_height = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);;
-	if ( dropdown_top + dropdown_height > viewport_height ) {
-		// Put it above the select
-		this.dropdown.style.top = position.top + 'px';
-		this.addClass( this.container, 'ioselect-select-up' );
-		this.addClass( this.dropdown, 'ioselect-drop-up' );
-	}
-}
-/**
- * Hide the dropdown
- */
-ioselect.prototype.HideDropdown = function( event ){
-	clearInterval( this.scroll_listener_interval );
-	window.removeEventListener( 'resize', this.resize_listener );
-	this.container.style.width = 'auto';
-	if( this.current_selected !== false ){
-		var current = this.list.querySelector( 'li:nth-child(' + (this.current_selected + 1).toString() + ')' );
-		this.removeClass( current, 'ioselect-current' );
-		this.current_selected = false;
-	}
-
-	// Reset viewport meta
-	if( this.current_meta ){
-		document.querySelector('meta[name="viewport"]').content = this.current_meta.join(',');
-	}
-
-	if( !this.hasClass( this.container, 'ioselect-open' ) ){
-		return;
-	}
-	// Remove classes
-	this.removeClass( this.container, 'ioselect-open' );
-	this.removeClass( this.container, 'ioselect-select-up' );
-	this.removeClass( this.dropdown, 'ioselect-open' );
-	this.removeClass( this.dropdown, 'ioselect-drop-up' );
-	// Hide the mask
-	if( this.mask.parentNode != null ){
-		document.querySelector( 'body' ).removeChild( this.mask );
-	}
-	// Clear search text
-	if(	this.filter.length > 0 ){
-		this.search.value = '';
-		this.filter = '';
-		// Dropdown will need to be rebuilt next time
-		this.dropdown_built = false;
-	}
-	// Remove key event listeners
-	document.querySelector( 'body' ).removeEventListener(
-		'keyup',
-		this.keypress_listener
-	);
-	this.search.removeEventListener(
-		'keyup',
-		this.search_listener
-	);
-	// Don't bother to update the dropdown
-	this.ClearSearchTimeout();
-	var parent = this.element.parentNode;
-	// while( parent != null ){
-	// 	parent.removeEventListener( 'scroll', this.scroll_listener );
-	// 	parent = parent.parentNode;
-	// }
-
-}
-/**
- * Listen for any key pressed (while dropdown is open)
- */
-ioselect.prototype.ListenForKeyPress = function( event ){
-	var k = event.keyCode;
-	if(
-		k == 27 // Escape
-		||
-		k == 9 // Tab
-	){
-		this.HideDropdown();
-	}
-	if(
-		k == 38 // Up
-		||
-		k == 40 // Down
-	){
-		event.stopPropagation();
-		event.preventDefault();
-		if( k == 40 ){
-			if( this.current_selected === false ){
-				this.current_selected = 0;
-			} else {
-				if( this.current_selected + 1 >= this.list.querySelectorAll( 'li' ).length ){
+		ioselect.prototype = {
+            /**
+             * Set up mutation observer on select element
+             */
+            Observe:function(){
+                this.mutation_observer = false;
+                if( typeof MutationObserver != 'undefined' ){
+    				// Listen for changes (e.g. add/remove options) and trigger an update
+    				this.mutation_observer = new MutationObserver(
+    					this.mutation_listener
+    				);
+                    this.mutation_observer.observe(
+    					this.element[ 0 ],
+    					{
+    						childList: true,
+    						attributes: true
+    					}
+    				);
+    			}
+            },
+            /**
+             * Mutation observer listener
+             */
+            SelectMutated: function( mutations ){
+				for( var i = 0; i < mutations.length; i++ ){
+                    this.HideDropdown();
+					switch( mutations[i].type ){
+						case 'childList':{
+							this.Update();
+							break;
+						}
+						case 'attributes':{
+							this.UpdateSelect();
+							break;
+						}
+					}
+				}
+			},
+            /**
+             * Called when window is resized
+             */
+			Resize: function(){
+				// To avoid roudning errors...
+				this.container.style.width = 'auto';
+				this.container.style.width = this.container.offsetWidth + 'px';
+				this.dropdown.style.width = this.container.offsetWidth + 'px';
+				this.SetDropdownPosition();
+			},
+			/**
+			 * An option in the dropdown has been clicked
+			 */
+			ClickSelect: function( event ){
+				if( $( this.container ).hasClass( 'ioselect-disabled' ) ){
 					return;
 				}
-				this.removeClass( this.list.querySelector( 'li:nth-child(' + (this.current_selected + 1).toString() + ')' ), 'ioselect-current' );
-				this.current_selected++;
+				if( $( this.container ).hasClass( 'ioselect-open' ) ){
+					this.HideDropdown();
+				} else {
+					this.ShowDropdown();
+				}
+			},
+			/**
+			 * Show the dropdown
+			 */
+			ShowDropdown: function( event ){
+				// We delay creating the dropdown until it's  first opened
+				// But it only happens once (unless the search filter text is changed)
+				if( !this.dropdown_built ){
+					this.BuildDropdown();
+				}
+
+				this.current_selected = false;
+				$( window ).on( 'resize', this.resize_listener );
+				viewportmeta = $('meta[name="viewport"]')[0];
+				this.current_meta = viewportmeta.content.split(',');
+				var new_meta = [];
+				for( var i = 0; i < this.current_meta.length; i++ ){
+					var parts = this.current_meta[ i ].split( '=' );
+					if( parts[ 0 ] != '' ){
+						new_meta.push( this.current_meta[ i ] );
+					}
+				}
+				new_meta.push( 'user-scalable=NO' );
+				viewportmeta.content = new_meta.join(',');
+
+				// Enable the mask (in case user clicks outside dropdown)
+				$( document.body ).append( this.mask );
+                $( this.mask ).on(
+    				'click',
+                    this.hide_dropdown
+    			);
+
+				// Listen for keypresses (escape, tab)
+				$( document.body ).on(
+					'keydown',
+					this.keypress_listener
+				);
+
+                if( this.min > 0 && this.element.find( 'option' ).length < this.min ){
+                    // Listen for search input
+    				$( this.search ).addClass( 'ioselect-hidden' );
+                } else {
+                    // Listen for search input
+    				$( this.search ).on(
+    					'input',
+    					this.search_listener
+    				);
+                    $( this.search ).removeClass( 'ioselect-hidden' );
+                }
+				this.scroll_listener_interval = setInterval(
+					this.scroll_listener,
+					10
+				)
+
+				// Hide the dropdown on scroll
+				// var parent = this.element.parentNode;
+				// while( parent != null ){
+				// 	parent.addEventListener( 'scroll', this.scroll_listener );
+				// 	parent = parent.parentNode;
+				// }
+
+				this.list.scrollTop = 0;
+
+				this.Resize();
+			},
+			SetDropdownPosition: function(){
+				var position = $( this.container ).position();
+
+				this.current_top = position.top;
+
+				this.dropdown.style.top = ( this.current_top + this.select.offsetHeight ).toString() + 'px';
+				this.dropdown.style.left = position.left.toString() + 'px';
+				$( this.container ).addClass( 'ioselect-open' );
+				$( this.dropdown ).addClass( 'ioselect-open' );
+
+				// See if it's dropping off the bottom of the screen
+				var dropdown_top = this.current_top - document.documentElement.scrollTop;
+				var dropdown_height = this.dropdown.offsetHeight;
+				var viewport_height = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);;
+				if ( dropdown_top + dropdown_height > viewport_height ) {
+					// Put it above the select
+					this.dropdown.style.top = position.top + 'px';
+					$( this.container ).addClass( 'ioselect-select-up' );
+					$( this.dropdown ).addClass( 'ioselect-drop-up' );
+				}
+			},
+			/**
+			 * Hide the dropdown
+			 */
+			HideDropdown: function( event ){
+				clearInterval( this.scroll_listener_interval );
+				window.removeEventListener( 'resize', this.resize_listener );
+				this.container.style.width = 'auto';
+				if( this.current_selected !== false ){
+					$( 'li:nth-child(' + (this.current_selected + 1).toString() + ')' ).removeClass( 'ioselect-current' );
+					this.current_selected = false;
+				}
+
+				// Reset viewport meta
+				if( this.current_meta ){
+					$('meta[name="viewport"]')[ 0 ].content = this.current_meta.join(',');
+				}
+				if( !$( this.container ).hasClass( 'ioselect-open' ) ){
+					return;
+				}
+				// Remove classes
+				$( this.container ).removeClass( 'ioselect-open ioselect-select-up' );
+                $( this.dropdown ).removeClass( 'ioselect-open ioselect-drop-up' );
+				// Hide the mask
+				if( this.mask.parentNode != null ){
+					$( this.mask ).remove();
+                    $( this.mask ).off(
+        				'click',
+                        this.hide_dropdown
+        			);
+				}
+				// Clear search text
+				if(	this.filter.length > 0 ){
+					this.search.value = '';
+					this.filter = '';
+					// Dropdown will need to be rebuilt next time
+					this.dropdown_built = false;
+				}
+				// Remove key event listeners
+				$( document.body ).off(
+					'keydown',
+					this.keypress_listener
+				);
+                $( this.search ).off(
+					'input',
+					this.search_listener
+				);
+				// Don't bother to update the dropdown
+				this.ClearSearchTimeout();
+				//var parent = this.element.parentNode;
+				// while( parent != null ){
+				// 	parent.removeEventListener( 'scroll', this.scroll_listener );
+				// 	parent = parent.parentNode;
+				// }
+
+			},
+			/**
+			 * Listen for any key pressed (while dropdown is open)
+			 */
+			ListenForKeyPress: function( event ){
+				var k = event.keyCode;
+				if(
+					k == 27 // Escape
+					||
+					k == 9 // Tab
+				){
+					this.HideDropdown();
+				}
+				if(
+					k == 38 // Up
+					||
+					k == 40 // Down
+				){
+					event.stopPropagation();
+					event.preventDefault();
+					if( k == 40 ){
+						if( this.current_selected === false ){
+							this.current_selected = 0;
+						} else {
+							if( this.current_selected + 1 >= this.list.querySelectorAll( 'li' ).length ){
+								return;
+							}
+							$( this.list ).find( 'li:nth-child(' + (this.current_selected + 1).toString() + ')' ).removeClass( 'ioselect-current' );
+							this.current_selected++;
+						}
+					} else {
+						if( this.current_selected === false || this.current_selected === 0 ){
+							return;
+						} else {
+							$( this.list ).find( 'li:nth-child(' + (this.current_selected + 1).toString() + ')' ).removeClass( 'ioselect-current' );
+							this.current_selected--;
+						}
+					}
+					var current = $( this.list ).find( 'li:nth-child(' + (this.current_selected + 1).toString() + ')' )[0];
+					$( current ).addClass( 'ioselect-current' );
+					// Make sure currently-selected item is in view
+					if( current.offsetTop - current.parentNode.scrollTop < 0 ){
+						current.parentNode.scrollTop = current.offsetTop;
+					} else if( current.offsetTop + current.offsetHeight > this.list.scrollTop + this.list.offsetHeight ) {
+						current.parentNode.scrollTop = (current.offsetTop + current.offsetHeight) - this.list.offsetHeight;
+					}
+				}
+				if(
+					k == 13 // Enter
+				){
+					if( this.current_selected !== false ){
+						$( this.list ).find( 'li:nth-child(' + (this.current_selected + 1).toString() + ')' )[ 0 ].click();
+					}
+				}
+			},
+			/**
+			 * An option was clicked
+			 */
+			ClickOption: function( event ){
+				event.stopPropagation();
+				if( $( event.target ).hasClass( 'ioselect-selected' ) || $( event.target ).hasClass( 'ioselect-disabled' ) ){
+					return;
+				}
+				var option = $( event.target ).closest( '.ioselect-option' );
+				if( option.length == 0 ){
+					return;
+				}
+				var value = option[0].getAttribute( 'data-value' );
+				// Update original select
+				if ( this.multiple ) {
+					if( value.length == 0 ){
+						return;
+					}
+			        // Convert string to array
+			        if ( $.isArray( value ) !== '[object Array]' ) {
+			            value = [value];
+			        }
+			        for( var i = 0; i < value.length; i++ ){
+			            var options = this.element.find( 'option[value="' + value[ i ].toString()  + '"]' );
+			            for( var o = 0; o < options.length; o++ ){
+			                options[ o ].selected = true;
+			            }
+			        }
+					$( event.target ).addClass( 'ioselect-selected' );
+			    } else {
+			        var options = this.element.find( 'option[value="' + value.toString()  + '"]' );
+			        for( var o = 0; o < options.length; o++ ){
+			            options[ o ].selected = true;
+			        }
+			    }
+				$( this.element ).trigger( 'change' );
+				this.HideDropdown();
+			},
+			/**
+			 * Remove an item from multiple select
+			 */
+			RemoveSelectedItem: function( event ){
+				event.stopPropagation();
+				var index = Array.prototype.indexOf.call(event.target.parentNode.childNodes, event.target);
+				var option = this.element.find( 'option:checked' )[ index ];
+				option.selected = false;
+				if( this.dropdown_built ){
+					$( this.list ).find( '[data-value="' + option.value + '"]' ).removeClass( 'ioselect-selected' );
+				}
+				$( this.element ).trigger( 'change' );
+			},
+			/**
+			 * (Re)build the dropdown
+			 */
+			BuildDropdown: function(){
+				this.ClearSearchTimeout();
+				// Get options
+				var options = this.element.find( 'option' );
+				// Using string and innerHTML is much faster to render
+				// ...than creating individual DOM nodes
+				var options_html = '';
+
+				for( var i = 0; i < options.length; i++ ){
+					var option = options[i];
+					// Filter?
+					if( this.filter.length > 0 ){
+						if( !(option.innerText.toLowerCase().indexOf( this.filter.toLowerCase() ) === 0) ){
+							continue;
+						}
+					}
+					var disabled = '';
+					if( option.getAttribute( 'disabled' ) !== null ){
+						disabled = ' ioselect-disabled'
+					}
+					var selected = '';
+					if( option.selected ){
+						selected = ' ioselect-selected';
+					}
+					options_html += '<li class="ioselect-option ioselect-ns' + disabled + selected + '" data-value="' + option.value + '">' + option.text+ '</li>';
+				}
+
+				this.list.innerHTML = options_html;
+
+				this.dropdown_built = true;
+				this.list.scrollTop = 0;
+			},
+			Update: function(){
+				this.dropdown_built = false;
+				this.UpdateSelect();
+			},
+			/**
+			 * Update the text shown in the select area
+			 */
+			UpdateSelect: function(){
+                if( this.mutation_observer ){
+                    // We need this because otherwise, jQuery gets stuck in a loop
+                    // ...because for some reason it triggers an attribute change
+                    // ...when selecting elements
+                    this.mutation_observer.disconnect();
+                }
+    			var selected = this.element.find( 'option:checked' );
+				if ( this.is_multiple ) {
+					var values = '';
+			        for( var i = 0; i < selected.length; i++ ){
+			            if ( selected[ i ].hasAttribute( 'value' ) ) {
+			                values += '<span class="ioselect-selected-item">' + selected[ i ].innerText + '</span>';
+			            }
+			        }
+					this.select.innerHTML = values;
+					var items = $( this.select ).find( '.ioselect-selected-item' );
+					for( var i = 0; i < items.length; i++ ){
+						$( items[ i ] ).on( 'click', this.RemoveSelectedItem.bind( this ) );
+					}
+				} else {
+					// None selected, use first
+					if( selected.length == 0 ){
+						var selected = this.element.find( 'option' );
+					}
+					this.select.innerText = selected[0].innerText;
+				}
+				if( this.element[ 0 ].disabled ){
+					$( this.container ).addClass( 'ioselect-disabled' );
+    			}
+                // Reinstate mutation observer
+                this.Observe();
+			},
+			/**
+			 * Listen for changes to the search input
+			 */
+			Search: function(){
+				// Has the filter text changed?
+				if( this.filter != this.search.value ){
+					// Cancel any pending update
+					if( this.search_timeout != null ){
+						this.ClearSearchTimeout();
+					}
+					// Update the filter
+					this.filter = this.search.value;
+					// Set a timeout to update the dropdown
+					this.search_timeout = setTimeout( function(){ this.search_timeout = null; this.BuildDropdown(); }.bind(this), 200 );
+				}
+
+			},
+			/**
+			 * Remove a build redraw timeout
+			 */
+			ClearSearchTimeout: function(){
+				clearTimeout( this.search_timeout );
+				this.search_timeout = null;
+			},
+			Scroll: function(){
+				var position = $( this.container ).position();
+				if( this.current_top !== position.top ){
+					this.HideDropdown();
+				}
 			}
-		} else {
-			if( this.current_selected === false || this.current_selected === 0 ){
-				return;
-			} else {
-				this.removeClass( this.list.querySelector( 'li:nth-child(' + (this.current_selected + 1).toString() + ')' ), 'ioselect-current' );
-				this.current_selected--;
-			}
 		}
-		var current = this.list.querySelector( 'li:nth-child(' + (this.current_selected + 1).toString() + ')' );
-		this.addClass( current, 'ioselect-current' );
-		// Make sure currently-selected item is in view
-		if( current.offsetTop - current.parentNode.scrollTop < 0 ){
-			current.parentNode.scrollTop = current.offsetTop;
-		} else if( current.offsetTop + current.offsetHeight > this.list.scrollTop + this.list.offsetHeight ) {
-			current.parentNode.scrollTop = (current.offsetTop + current.offsetHeight) - this.list.offsetHeight;
-		}
-	}
-	if(
-		k == 13 // Enter
-	){
-		if( this.current_selected !== false ){
-			this.list.querySelector( 'li:nth-child(' + (this.current_selected + 1).toString() + ')' ).click();
-		}
-	}
-}
-/**
- * An option was clicked
- */
-ioselect.prototype.ClickOption = function( event ){
-	event.stopPropagation();
-	if( this.hasClass( event.target, 'ioselect-selected' ) || this.hasClass( event.target, 'ioselect-disabled' ) ){
-		return;
-	}
-	var option = this.closest( event.target, '.ioselect-option' );
-	if( option === null ){
-		return;
-	}
-	var value = option.getAttribute( 'data-value' );
-	// Update original select
-	if ( typeof this.element.getAttribute( 'multiple' ) != 'undefined' && this.element.getAttribute( 'multiple' ) != null ) {
-		if( value.length == 0 ){
-			return;
-		}
-        // Convert string to array
-        if ( Object.prototype.toString.call( value ) !== '[object Array]' ) {
-            value = [value];
-        }
-        for( var i = 0; i < value.length; i++ ){
-            var options = this.element.querySelectorAll( 'option[value="' + value[ i ].toString()  + '"]' );
-            for( var o = 0; o < options.length; o++ ){
-                options[ o ].selected = true;
-            }
-        }
-		this.addClass( event.target, 'ioselect-selected' );
-    } else {
-        var options = this.element.querySelectorAll( 'option[value="' + value.toString()  + '"]' );
-        for( var o = 0; o < options.length; o++ ){
-            options[ o ].selected = true;
-        }
-    }
-	this.trigger( this.element, 'change' );
-	this.HideDropdown();
-}
-/**
- * Remove an item from multiple select
- */
-ioselect.prototype.RemoveSelectedItem = function( event ){
-	event.stopPropagation();
-	var index = Array.prototype.indexOf.call(event.target.parentNode.childNodes, event.target);
-	var option = this.element.querySelectorAll( 'option:checked' )[ index ]
-	option.selected = false;
-	if( this.dropdown_built ){
-		this.removeClass( this.list.querySelector( '[data-value="' + option.value + '"]' ), 'ioselect-selected' );
-	}
-	this.trigger( this.element, 'change' );
-}
-/**
- * (Re)build the dropdown
- */
-ioselect.prototype.BuildDropdown = function(){
-	this.ClearSearchTimeout();
-	// Get options
-	var options = this.element.querySelectorAll( 'option' );
-	// Using string and innerHTML is much faster to render
-	// ...than creating individual DOM nodes
-	var options_html = '';
-	for( var i = 0; i < options.length; i++ ){
-		var option = options[i];
-		// Filter?
-		if( this.filter.length > 0 ){
-			if( !(option.innerText.toLowerCase().indexOf( this.filter.toLowerCase() ) === 0) ){
-				continue;
-			}
-		}
-		var disabled = '';
-		if( option.getAttribute( 'disabled' ) !== null ){
-			disabled = ' ioselect-disabled'
-		}
-		var selected = '';
-		if( option.selected ){
-			selected = ' ioselect-selected';
-		}
-		options_html += '<li class="ioselect-option ioselect-ns' + disabled + selected + '" data-value="' + option.value + '">' + option.text+ '</li>';
-	}
-	this.list.innerHTML = options_html;
-	// Listen for click
-	var options = this.dropdown.addEventListener(
-		'click',
-		this.ClickOption.bind( this )
-	);
-	this.UpdateSelect();
 
-	this.dropdown_built = true;
-	this.list.scrollTop = 0;
-}
-ioselect.prototype.Update = function(){
-	this.dropdown_built = false;
-	this.UpdateSelect();
-}
-/**
- * Update the text shown in the select area
- */
-ioselect.prototype.UpdateSelect = function(){
-	var selected = this.element.querySelectorAll( 'option:checked' );
-	if ( typeof this.element.getAttribute( 'multiple' ) != 'undefined' && this.element.getAttribute( 'multiple' ) != null ) {
-		var values = '';
-        for( var i = 0; i < selected.length; i++ ){
-            if ( selected[ i ].hasAttribute( 'value' ) ) {
-                values += '<span class="ioselect-selected-item">' + selected[ i ].innerText + '</span>';
-            }
-        }
-		this.select.innerHTML = values;
-		var items = this.select.querySelectorAll( '.ioselect-selected-item' );
-		for( var i = 0; i < items.length; i++ ){
-			items[ i ].addEventListener( 'click', this.RemoveSelectedItem.bind( this ) );
-		}
-	} else {
-		// None selected, use first
-		if( selected.length == 0 ){
-			var selected = this.element.querySelectorAll( 'option' );
-		}
-		this.select.innerText = selected.item(0).innerText;
+		return ioselect;
 	}
-	if( this.element.disabled ){
-		this.addClass( this.container, 'ioselect-disabled' );
-	}
-}
-/**
- * Listen for changes to the search input
- */
-ioselect.prototype.Search = function(){
-	// Has the filter text changed?
-	if( this.filter != this.search.value ){
-		// Cancel any pending update
-		if( this.search_timeout != null ){
-			this.ClearSearchTimeout();
-		}
-		// Update the filter
-		this.filter = this.search.value;
-		// Set a timeout to update the dropdown
-		this.search_timeout = setTimeout( function(){ this.search_timeout = null; this.BuildDropdown(); }.bind(this), 200 );
-	}
+)
+);
 
-}
-/**
- * Remove a build redraw timeout
- */
-ioselect.prototype.ClearSearchTimeout = function(){
-	clearTimeout( this.search_timeout );
-	this.search_timeout = null;
-}
-ioselect.prototype.Scroll = function(){
-	var position = this.position( this.container );
-	if( this.current_top !== position.top ){
-		this.HideDropdown();
-	}
-}
-ioselect.prototype.position = function( elem ){
-	var box = elem.getBoundingClientRect();
-
-    var body = document.body;
-    var docEl = document.documentElement;
-
-    var scrollTop = window.pageYOffset || docEl.scrollTop || body.scrollTop;
-    var scrollLeft = window.pageXOffset || docEl.scrollLeft || body.scrollLeft;
-
-    var clientTop = docEl.clientTop || body.clientTop || 0;
-    var clientLeft = docEl.clientLeft || body.clientLeft || 0;
-
-    var top  = box.top +  scrollTop - clientTop;
-    var left = box.left + scrollLeft - clientLeft;
-
-    return { top: Math.round(top), left: Math.round(left) };
-}
-
-
-/**
- * DOM manipulation helper methods
- */
-ioselect.prototype.addClass = function( element, className ){
-	if ( false && element.classList ){
-		element.classList.add( className );
-	} else {
-		element.className += ' ' + className;
-	}
-}
-ioselect.prototype.removeClass = function( element, className ){
-	if (element.classList)
-	  element.classList.remove(className);
-	else
-	  element.className = element.className.replace(new RegExp('(^|\\b)' + className.split(' ').join('|') + '(\\b|$)', 'gi'), ' ');
- }
-ioselect.prototype.hasClass = function( element, className ){
-	if (element.classList)
-	  return element.classList.contains(className);
-	else
-	  return new RegExp('(^| )' + className + '( |$)', 'gi').test(element.className);
-}
-ioselect.prototype.create = function( html ){
-	var div = document.createElement('div');
-	div.innerHTML = html;
-	return div.childNodes;
-}
-ioselect.prototype.after = function( element, html ){
-	if( typeof html == 'string' ){
-		html = this.create( html );
-	}
-	for( var i = 0; i < html.length; i++ ){
-		element.parentNode.insertBefore( html[ i ], element.nextSibling );
-	}
-}
-ioselect.prototype.append = function( element, html ){
-	if( typeof html == 'string' ){
-		html = this.create( html );
-	}
-	if( typeof html.length == 'undefined' ){
-		element.appendChild( html );
-	} else {
-		for( var i = 0; i < html.length; i++ ){
-			element.appendChild( html[i] );
-		}
-	}
-}
-ioselect.prototype.trigger = function( element, event_name ){
-	if ("createEvent" in document) {
-	    var evt = document.createEvent("HTMLEvents");
-	    evt.initEvent( event_name, false, true);
-	    element.dispatchEvent(evt);
-	} else {
-		element.fireEvent(event_name);
-	}
-}
-
-// Taken from https://gist.github.com/mishschmid/6c5e53b86b624c120268ecc8f626114c
-ioselect.prototype.closest = function (el, selector) {
-    while (el.matches && !el.matches(selector)) el = el.parentNode;
-    return el.matches ? el : null;
-};
 // Polyfill for Element.matches
 Element.prototype.matches = Element.prototype.matches ||
 	Element.prototype.matchesSelector ||
@@ -567,3 +565,342 @@ Element.prototype.matches = Element.prototype.matches ||
 	    while (nodes[++i] && nodes[i] !== node);
 	    return !!nodes[i];
 	};
+
+
+    if( typeof $ == 'undefined' ){
+        var $ = function( selector ){
+
+            /**
+             * append
+             */
+            var A = function( selector ){
+                var nodelist = F( selector );
+                for( var i = 0; i < nodelist.length; i++ ) {
+                    this[0].appendChild( nodelist[ i ] );
+                }
+                return this;
+            };
+    		/**
+            * prepend
+            */
+            var P = function( selector ){
+                var nodelist = F( selector );
+                for( var i = nodelist.length - 1; i >= 0 ; i-- ) {
+                    this[ 0 ].insertBefore( nodelist[ i ], this[ 0 ].firstChild);
+                }
+                return this;
+            };
+    		/**
+            * remove
+            */
+            var R = function( selector ) {
+                this.each( function(){this.parentNode.removeChild(this);} );
+            }
+
+        	// each
+            var E = function( fn ) {
+                for (var i = 0; i < this.length; i++){
+                    fn.apply(this[i]);
+                }
+            }
+
+
+            /**
+            * closest
+            */
+            var FC = function( selector ){
+                var elements = [];
+                for( var i = 0; i < this.length; i++ ){
+                    var element = this[ i ];
+                    while( element ){
+                        if ( IS( element, selector ) ) {
+                            elements.push( element );
+                            element = false;
+                        }
+                        element = element.parentNode;
+                    }
+                }
+                return $( elements );
+            };
+
+            /**
+            * on
+            */
+            var O = function( event, func ){
+               for( var i = 0; i < this.length; i++ ){
+                   this[ i ].addEventListener( event, func );
+               }
+               return this;
+            };
+            /**
+            * off
+            */
+            var OF = function( event, func ){
+               for( var i = 0; i < this.length; i++ ){
+                   this[ i ].removeEventListener( event, func );
+               }
+               return this;
+            };
+
+            /**
+            * addClass
+            */
+            var AC = function( className ){
+                for( var i = 0; i < this.length; i++ ){
+                    if (this[ i ].classList){
+                        this[ i ].classList.add(className);
+                    } else {
+                        this[ i ].className += ' ' + className;
+                    }
+                }
+            };
+            /**
+            * removeClass
+            */
+            var RC = function( classes ){
+                if ( classes.indexOf( ' ' ) != -1 ) {
+                    classes = classes.split(' ');
+                } else {
+                    classes = [classes];
+                }
+                for ( var i = 0; i < classes.length; i++ ) {
+                    var className = classes[i];
+                    this.each(function(){
+                        if (this.classList)
+                            this.classList.remove(className);
+                        else
+                            this.className = this.className.replace(new RegExp('(^|\\b)' + className.split(' ').join('|') + '(\\b|$)', 'gi'), ' ');
+                        }
+                    );
+                }
+            };
+
+            /**
+            * hasClass
+            */
+            var HC = function( className ){
+                var o = false;
+                for( var i = 0; i < this.length; i++ ){
+                    if (this[ i ].classList){
+                        if( this[ i ].classList.contains(className) ){
+                            return true
+                        };
+                    } else {
+                        if( new RegExp('(^| )' + className + '( |$)', 'gi').test( this[ i ].className ) ){
+                            return true
+                        };
+                    }
+                }
+                return false;
+            }
+
+            /**
+             * insertBefore
+             */
+            var IB = function( selector ){
+                var nodelist = $( selector );
+                for( var i = 0; i < nodelist.length; i++ ){
+                    var element = nodelist[ i ];
+                    $( this ).each(
+                        function() {
+                            element.parentNode.insertBefore(this,element);
+                        }
+                    );
+                }
+                return this;
+            }
+            /**
+             * insertAfter
+             */
+            var IA = function( selector ){
+
+                var nodelist = $( selector );
+                for( var i = 0; i < nodelist.length; i++ ){
+                    var element = nodelist[ i ];
+                    $( this ).each(
+                        function() {
+                            element.parentNode.insertBefore(this, element.nextSibling);
+                        }
+                    );
+                }
+                return this;
+            }
+
+            /**
+            * is
+            */
+            var IS = function(el, selector) {
+                if ( $.isArray( el ) ) {
+                    for( var i = 0; i < el.length; i++ ){
+                        return IS( el[ i ], selector );
+                    }
+                }
+                if ( selector instanceof HTMLElement ) {
+                    return el === selector;
+                } else {
+                    if ( $.isArray( selector ) ) {
+                        for( var i = 0; i < selector.length; i++ ){
+                            if ( IS( el, selector ) ) {
+                                return true;
+                            }
+                        }
+                    } else {
+                        return (el.matches || el.matchesSelector || el.msMatchesSelector || el.mozMatchesSelector || el.webkitMatchesSelector || el.oMatchesSelector).call(el, selector);
+                    }
+                }
+                return this;
+            }
+
+            /**
+             * trigger
+             */
+             var T = function( event_name ){
+                if ("createEvent" in document) {
+                    var evt = document.createEvent("HTMLEvents");
+                    evt.initEvent( event_name, false, true);
+                    for( var i = 0; i < this.length; i++ ){
+                        this[i].dispatchEvent(evt);
+                    }
+                } else {
+                    for( var i = 0; i < this.length; i++ ){
+                        this[ i ].fireEvent(event_name);
+                    }
+                }
+            }
+
+            /**
+             * position
+             */
+            P = function(){
+                // Returns the first element
+                if( this.length == 0 ){
+                    return undefined;
+                }
+                var elem = this[0];
+                var box = elem.getBoundingClientRect();
+
+                var body = document.body;
+                var docEl = document.documentElement;
+
+                var scrollTop = window.pageYOffset || docEl.scrollTop || body.scrollTop;
+                var scrollLeft = window.pageXOffset || docEl.scrollLeft || body.scrollLeft;
+
+                var clientTop = docEl.clientTop || body.clientTop || 0;
+                var clientLeft = docEl.clientLeft || body.clientLeft || 0;
+
+                var top  = box.top +  scrollTop - clientTop;
+                var left = box.left + scrollLeft - clientLeft;
+
+                return { top: Math.round(top), left: Math.round(left) };
+            }
+
+            /**
+             * find
+             */
+            var F = function( element, parent_element ){
+                var e;
+                if( element instanceof HTMLElement || element instanceof Window ){
+                    e = [element];
+                } else {
+                    switch ( Object.prototype.toString.call(element).match( /\[object (.*)\]/ )[1] ) {
+                        case 'String':{
+                            if ( element.charAt( 0 ) == '<' ) {
+                                var dummy = document.createElement( 'DIV' );
+                                dummy.innerHTML = element;
+                                elements = dummy.childNodes;
+                            } else {
+                                var children_only = false;
+                                if ( element.charAt( 0 ) == '>' ) {
+                                    children_only = true;
+                                    element = element.substring( 1 );
+                                }
+                                if ( parent_element ) {
+                                    if ( $.isArray( parent_element ) ) {
+                                        var elements = [];
+                                        for ( var i = 0; i < parent_element.length; i++ ) {
+                                            var found_elements = parent_element[ i ].querySelectorAll(element);
+                                            for ( var f = 0; f < found_elements.length; f++ ) {
+                                                if(elements.indexOf(found_elements[f]) == -1 ){
+                                                    elements.push.apply( elements, parent_element[ i ].querySelectorAll(element) );
+                                                }
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    elements = document.querySelectorAll(element);
+                                }
+                                if ( children_only ) {
+                                    var new_elements = [];
+                                    parent_element = (parent_element)?parent_element:document;
+                                    for( var i = 0; i < elements.length; i++ ){
+                                        if ( IS( parent_element, elements[i].parentNode ) ) {
+                                            new_elements.push(elements[i]);
+                                        }
+                                    }
+                                    elements = new_elements;
+                                }
+                            }
+
+                            break;
+                        }
+                        case 'Object':
+                        {
+                            // jQuery list of elements?
+                            if ( typeof jQuery != 'undefined' && element instanceof jQuery ) {
+                                elements = element.toArray();
+                            }
+                            break;
+                        }
+                        case 'Array':
+                        case 'NodeList':{
+                            elements = element;
+                            break;
+                        }
+                        case 'Function':{
+                            // Call when page loads
+                            if (document.readyState != 'loading' && document.readyState != 'interactive'){
+                                element();
+                            } else {
+                                document.addEventListener('DOMContentLoaded', element);
+                            }
+                            return;
+                        }
+                        case 'Undefined':{
+                            elements = [];
+                            break;
+                        }
+                        default:{
+                            console.log(element);
+                            console.log(Object.prototype.toString.call(element).match( /\[object (.*)\]/ )[1]);
+                        }
+                    }
+                    // Convert elements into array
+                    var e = [];
+                    for ( var i = 0; i < elements.length; i++ ) {
+                        e.push( elements[ i ] );
+                    }
+                }
+
+                // Add methods
+                var f = {append:A,prepend:P,insertAfter:IA,insertBefore:IB,on:O,off:OF,addClass:AC,hasClass:HC,removeClass:RC,each:E,closest:FC,remove:R,trigger:T,position:P};
+                for ( var fi in f ) {
+                    e[fi] = function( e, f ){
+                       return function(){return f.apply( e, arguments )};
+                    }.apply( e, [e, f[fi]] )
+                }
+                e.find = function(selector){return F.apply(e,[selector,e])};
+
+                return e;
+            };
+
+            var e = F( selector );
+
+            return e;
+        }
+        $.proxy = function( func, context ){
+            return function(){func.apply( context, arguments )};
+        }
+        $.isArray = function( arr ){
+            return Object.prototype.toString.call( arr ).match( /\[object (.*)\]/ )[1] == 'Array';
+        }
+    }
