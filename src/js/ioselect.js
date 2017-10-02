@@ -1,5 +1,4 @@
 // TODO: display dropdown fullscreen on mobile
-// TODO: destroy
 // TODO: events
 // TODO: OPTGROUP support
 // TODO: Optimise for file size
@@ -53,6 +52,8 @@
     function () {
 		var ioselect = function( element, options ){
 
+            this.listeners = [];
+
             this.options = {
                 search_min: 0
             }
@@ -60,12 +61,6 @@
 			$( element ).addClass( 'ioselect-hidden' );
 			this.element = $( element );
             this.is_multiple = typeof this.element[ 0 ].getAttribute( 'multiple' ) != 'undefined' && this.element[ 0 ].getAttribute( 'multiple' ) != null;
-            // // https://stackoverflow.com/questions/36971998/can-i-get-all-attributes-that-begin-with-on-using-jquery
-            // var options = [].slice.call(this.element[0].attributes).filter(function(attr) {
-            //     return attr && attr.name && attr.name.indexOf('data-ioselect') === 0
-            // }) )
-            // ;
-
 
             this.options = {
                 search_min: 0,
@@ -80,6 +75,7 @@
             }
 
             // Grab any options from the element
+            // https://stackoverflow.com/questions/36971998/can-i-get-all-attributes-that-begin-with-on-using-jquery
             [].slice.call(this.element[0].attributes).filter(function(attr) {
             	return attr && attr.name && attr.name.indexOf('data-ioselect-') === 0
             }).forEach(function(attr) {
@@ -87,8 +83,6 @@
             }.bind(this));
             this.options.search_min = parseInt( this.options.search_min );
             this.options.search = this.options.search && this.options.search !== '0';
-
-            console.log(this.options)
 
 			this.element[ 0 ].removeAttribute( 'tabindex' );
 			var container = $( '<div class="ioselect-container"><div class="ioselect-select ioselect-ns' + ((this.multiple)?' ioselect-multiple':'') + '"></div><div class="ioselect-dropdown"><div class="ioselect-search"><input tabindex="-1" type="text" class="ioselect-input" autocorrect="off" autocapitalize="off"></div><ul></ul></div>' );
@@ -118,51 +112,48 @@
 
 			// Search filter text
 			this.filter = '';
+
+            // Watches for changes to the original select (e.g. options, disabled)
             this.mutation_listener = this.SelectMutated.bind( this );
-            this.Observe();
-			// Listen for keypress -- tracks if user presses escape or tab
-			this.keypress_listener = this.ListenForKeyPress.bind(this);
-			// Listen for typing in search input box
-			this.search_listener = this.Search.bind(this);
-			// Listen for typing in search input box
-			this.scroll_listener = this.Scroll.bind(this);
-			// Listen for window resize
-			this.resize_listener = this.Resize.bind( this );
-            // Listen for window resize
-			this.hide_dropdown = this.HideDropdown.bind( this );
-            // Listen for form reset
-            this.reset_listener = this.Reset.bind(this);
-            // Listen for item removed
-            this.remove_item_listener = this.RemoveSelectedItem.bind( this );
-            // Option clicked
-            this.click_option_listener = this.ClickOption.bind( this );
-            // Option clicked
-            this.click_select_listener = this.ClickSelect.bind(this);
-            // Element changed
-            this.element_changed_listener = this.Update.bind( this );
+            this.mutation_observer = false;
+            if( typeof MutationObserver != 'undefined' ){
+                // Listen for changes (e.g. add/remove options) and trigger an update
+                this.mutation_observer = new MutationObserver(
+                    this.mutation_listener
+                );
+                this.mutation_observer.observe(
+                    this.element[ 0 ],
+                    {
+                        childList: true,
+                        attributes: true
+                    }
+                );
+            }
 
             // Update when the form is reset
-			this.element.closest( 'form' ).on(
-				'reset',
-                this.reset_listener
+			this.bind(
+                this.element.closest( 'form' ),
+                'reset',
+                this.Reset.bind(this)
 			);
 
             // Listen for click
-            $( this.dropdown ).on(
+            this.bind(
+                $( this.dropdown ),
                 'click',
-                this.click_option_listener
-            );
-
+                this.ClickOption.bind( this )
+			);
             // Listen for click
-			$( this.select ).on(
-				'click',
-                this.click_select_listener
+            this.bind(
+                $( this.select ),
+                'click',
+                this.ClickSelect.bind(this)
 			);
 
-            // Listen for original element change
-			this.element.on(
-				'change',
-				this.element_changed_listener
+            this.bind(
+                this.element,
+                'change',
+				this.Update.bind( this )
 			);
 
 			// Stores a delay when updating dropdown due to search filter change
@@ -171,26 +162,53 @@
             // Update the text showing in the select area
             this.UpdateSelect();
 			//this.scroll_listener = function(event){this.HideDropdown();}.bind(this);
+            $( this.element ).trigger( 'ready' );
+
 		}
 		ioselect.prototype = {
+            on:function( event, func ){
+                this.bind( this.element, event, func );
+            },
             /**
-             * Set up mutation observer on select element
+             * Add an event listener and store a record of it for removal later
+             *
+             * @param       HTMLElement     element
+             * @param       string          event
+             @ @param       function        func
              */
-            Observe:function(){
-                this.mutation_observer = false;
-                if( typeof MutationObserver != 'undefined' ){
-    				// Listen for changes (e.g. add/remove options) and trigger an update
-    				this.mutation_observer = new MutationObserver(
-    					this.mutation_listener
-    				);
-                    this.mutation_observer.observe(
-    					this.element[ 0 ],
-    					{
-    						childList: true,
-    						attributes: true
-    					}
-    				);
-    			}
+            bind:function( element, event, func ){
+                this.listeners.push( {element:$(element)[0],event:event,func:func} );
+                $( element ).on( event, func );
+            },
+            /**
+             * Remove an event listener
+             *
+             * @param       HTMLElement     element     [Optional] Element to unbind event from. If undefined, all elements will be unbound
+             * @param       string          event       [Optional] The event to remove - if missing, all event listeners will be removed
+             @ @param       function        func        [Optional] The listener to be removed -- if missing, all listeners for this event will be removed
+             */
+            unbind:function( element, event, func ){
+                element = $(element)[0];
+                var listeners = [];
+                // Loop through all listeners, looking for a match
+                for( var i = 0; i < this.listeners.length; i++ ){
+                    var listener = this.listeners[ i ];
+                    if(
+                        ( typeof element == 'undefined' || listener.element == element )
+                        &&
+                        ( typeof event == 'undefined' || event == listener.event )
+                        &&
+                        ( typeof func == 'undefined' || func == listener.func )
+                    ){
+                        // Remove this listener
+                        $( listener.element ).off( listener.event, listener.func );
+                    } else {
+                        // Store this for later
+                        listeners.push( listener );
+                    }
+                }
+                // Any that weren't removed
+                this.listeners = listeners;
             },
             /**
              * Mutation observer listener
@@ -253,7 +271,7 @@
 				}
 
 				this.current_selected = false;
-				$( window ).on( 'resize', this.resize_listener );
+				this.bind( window, 'resize', this.Resize.bind(this) );
 				viewportmeta = $('meta[name="viewport"]')[0];
 				this.current_meta = viewportmeta.content.split(',');
 				var new_meta = [];
@@ -268,15 +286,17 @@
 
 				// Enable the mask (in case user clicks outside dropdown)
 				$( document.body ).append( this.mask );
-                $( this.mask ).on(
+                this.bind(
+                    this.mask,
     				'click',
-                    this.hide_dropdown
+                    this.HideDropdown.bind( this )
     			);
 
 				// Listen for keypresses (escape, tab)
-				$( document.body ).on(
+				this.bind(
+                    document.body,
 					'keydown',
-					this.keypress_listener
+					this.ListenForKeyPress.bind(this)
 				);
 
                 if(
@@ -292,14 +312,15 @@
     				$( this.search ).addClass( 'ioselect-hidden' );
                 } else {
                     // Listen for search input
-    				$( this.search ).on(
+    				this.bind(
+                        this.search,
     					'input',
-    					this.search_listener
+    					this.Search.bind(this)
     				);
                     $( this.search ).removeClass( 'ioselect-hidden' );
                 }
 				this.scroll_listener_interval = setInterval(
-					this.scroll_listener,
+					this.Scroll.bind(this),
 					10
 				)
 
@@ -313,6 +334,7 @@
 				this.list.scrollTop = 0;
 
 				this.Resize();
+                $( this.element ).trigger( 'show-dropdown' );
 			},
 			SetDropdownPosition: function(){
 				var position = $( this.container ).position();
@@ -340,7 +362,7 @@
 			 */
 			HideDropdown: function( event ){
 				clearInterval( this.scroll_listener_interval );
-				window.removeEventListener( 'resize', this.resize_listener );
+				this.unbind( window, 'resize' );
 				this.container.style.width = 'auto';
 				if( this.current_selected !== false ){
 					$( 'li:nth-child(' + (this.current_selected + 1).toString() + ')' ).removeClass( 'ioselect-current' );
@@ -360,9 +382,9 @@
 				// Hide the mask
 				if( this.mask.parentNode != null ){
 					$( this.mask ).remove();
-                    $( this.mask ).off(
-        				'click',
-                        this.hide_dropdown
+                    this.unbind(
+                        this.mask,
+        				'click'
         			);
 				}
 				// Clear search text
@@ -373,13 +395,13 @@
 					this.dropdown_built = false;
 				}
 				// Remove key event listeners
-				$( document.body ).off(
-					'keydown',
-					this.keypress_listener
+				this.unbind(
+                    document.body,
+					'keydown'
 				);
-                $( this.search ).off(
-					'input',
-					this.search_listener
+                this.unbind(
+                    this.search,
+					'input'
 				);
 				// Don't bother to update the dropdown
 				this.ClearSearchTimeout();
@@ -388,7 +410,7 @@
 				// 	parent.removeEventListener( 'scroll', this.scroll_listener );
 				// 	parent = parent.parentNode;
 				// }
-
+                $( this.element ).trigger( 'hide-dropdown' );
 			},
 			/**
 			 * Listen for any key pressed (while dropdown is open)
@@ -449,7 +471,7 @@
 			 */
 			ClickOption: function( event ){
 				event.stopPropagation();
-				if( $( event.target ).hasClass( 'ioselect-selected' ) || $( event.target ).hasClass( 'ioselect-disabled' ) ){
+				if( $( event.target ).hasClass( 'ioselect-selected' ) || $( event.target ).hasClass( 'ioselect-disabled' ) || event.target.tagName == 'INPUT' ){
 					return;
 				}
 				var option = $( event.target ).closest( '.ioselect-option' );
@@ -538,13 +560,10 @@
 			 * Update the text shown in the select area
 			 */
 			UpdateSelect: function(){
-                if( this.mutation_observer ){
-                    // We need this because otherwise, jQuery gets stuck in a loop
-                    // ...because for some reason it triggers an attribute change
-                    // ...when selecting elements
-                    this.mutation_observer.disconnect();
-                }
-    			var selected = this.element.find( 'option:checked' );
+                // We can't use jQuery here, because if we do it'll cause
+                // an infinite loop on the MutationObserver
+                // so querySelectorAll will have to do
+    			var selected = this.element[ 0 ].querySelectorAll( 'option:checked' );
 				if ( this.is_multiple ) {
 					var values = '';
 			        for( var i = 0; i < selected.length; i++ ){
@@ -555,7 +574,7 @@
 					this.select.innerHTML = values;
 					var items = $( this.select ).find( '.ioselect-selected-item' );
 					for( var i = 0; i < items.length; i++ ){
-						$( items[ i ] ).on( 'click', this.remove_item_listener );
+						this.bind( items[ i ], 'click', this.RemoveSelectedItem.bind( this ) );
 					}
 				} else {
 					// None selected, use first
@@ -567,8 +586,6 @@
 				if( this.element[ 0 ].disabled ){
 					$( this.container ).addClass( 'ioselect-disabled' );
     			}
-                // Reinstate mutation observer
-                this.Observe();
 			},
 			/**
 			 * Listen for changes to the search input
@@ -602,14 +619,12 @@
 			},
             Destroy:function(){
                 // Clear listeners
-                $( window ).off( 'resize', this.resize_listener );
-                $( this.mask ).off( 'click', this.hide_dropdown );
-				$( document.body ).off( 'keydown', this.keypress_listener );
-                $( this.search ).off( 'input', this.search_listener );
-                $( this.dropdown ).find( 'option' ).off( 'click', this.remove_item_listener );
-                $( this.dropdown ).off( 'click', this.click_option_listener );
-    			$( this.select ).off( 'click', this.click_select_listener );
-    			this.element.on( 'change', this.element_changed_listener );
+                this.unbind();
+
+                // Remove MutationObserver
+                if( this.mutation_observer ){
+                    this.mutation_observer.disconnect();
+                }
 
                 // Remove element
                 this.container.remove();
@@ -618,6 +633,7 @@
 
                 // Show original element
                 this.element.removeClass( 'ioselect-hidden' );
+                $( this.element ).trigger( 'destroyed' );
             }
 		}
 
