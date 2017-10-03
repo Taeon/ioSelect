@@ -2,6 +2,7 @@
 // TODO: events
 // TODO: OPTGROUP support
 // TODO: Optimise for file size
+// TODO: respond to select focus (tabindex)
 
 // Possible features...
 // TODO: No results text
@@ -63,8 +64,8 @@
             this.is_multiple = typeof this.element[ 0 ].getAttribute( 'multiple' ) != 'undefined' && this.element[ 0 ].getAttribute( 'multiple' ) != null;
 
             this.options = {
-                search_min: 0,
-                search: true
+                search_min: 0, // Lower limit for showing seach box. Zero means 'always'
+                search: true // Set to false to never show search box
             };
 
             // Overwrite options passed in on constructor
@@ -168,6 +169,9 @@
 		ioselect.prototype = {
             on:function( event, func ){
                 this.bind( this.element, event, func );
+            },
+            off:function( event, func ){
+                this.unbind( this.element, event, func );
             },
             /**
              * Add an event listener and store a record of it for removal later
@@ -337,7 +341,7 @@
                 $( this.element ).trigger( 'show-dropdown' );
 			},
 			SetDropdownPosition: function(){
-				var position = $( this.container ).position();
+				var position = $( this.container ).offset();
 
 				this.current_top = position.top;
 
@@ -612,7 +616,7 @@
 				this.search_timeout = null;
 			},
 			Scroll: function(){
-				var position = $( this.container ).position();
+				var position = $( this.container ).offset();
 				if( this.current_top !== position.top ){
 					this.HideDropdown();
 				}
@@ -856,9 +860,9 @@ Element.prototype.matches = Element.prototype.matches ||
             }
 
             /**
-             * position
+             * offset (position relative to document)
              */
-            P = function(){
+            OS = function(){
                 // Returns the first element
                 if( this.length == 0 ){
                     return undefined;
@@ -969,7 +973,7 @@ Element.prototype.matches = Element.prototype.matches ||
                 }
 
                 // Add methods
-                var f = {append:A,prepend:P,insertAfter:IA,insertBefore:IB,on:O,off:OF,addClass:AC,hasClass:HC,removeClass:RC,each:E,closest:FC,remove:R,trigger:T,position:P};
+                var f = {append:A,prepend:P,insertAfter:IA,insertBefore:IB,on:O,off:OF,addClass:AC,hasClass:HC,removeClass:RC,each:E,closest:FC,remove:R,trigger:T,offset:OS};
                 for ( var fi in f ) {
                     e[fi] = function( e, f ){
                        return function(){return f.apply( e, arguments )};
