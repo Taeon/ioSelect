@@ -1,7 +1,6 @@
 // TODO: display dropdown fullscreen on mobile
 // TODO: events
 // TODO: OPTGROUP support
-// TODO: Optimise for file size
 // TODO: respond to select focus (tabindex)
 
 // Possible features...
@@ -239,17 +238,15 @@ if( typeof $ == 'undefined' ){
 		 * trigger
 		 */
 		 var T = function( event_name ){
-			if ("createEvent" in document) {
-				var evt = document.createEvent("HTMLEvents");
-				evt.initEvent( event_name, false, true);
-				for( var i = 0; i < this.length; i++ ){
-					this[i].dispatchEvent(evt);
-				}
-			} else {
-				for( var i = 0; i < this.length; i++ ){
-					this[ i ].fireEvent(event_name);
-				}
-			}
+			 var params = {detail:{}};
+			 if( arguments.length > 1 ){
+				 // Emulate jQuery behaviour
+				 params.detail.__args = arguments[1];
+			 }
+			 var evt = new CustomEvent( event_name, params );
+			 for( var i = 0; i < this.length; i++ ){
+				 this[i].dispatchEvent(evt);
+			 }
 		}
 
 		/**
@@ -505,7 +502,17 @@ if( typeof $ == 'undefined' ){
 		}
 		ioselect.prototype = {
             on:function( event, func ){
-                this.b( this.e, event, func );
+                // We wrap the callback in a function, so that we can pass arguments direct to function
+                var _func = function( event ){
+                    if( typeof event.detail != 'undefined' && $.isArray( event.detail.__args ) ){
+                        var args = [event];
+                        args.push.apply(args, event.detail.__args);
+                        func.apply(null,args);
+                    } else {
+                        func.apply( func, arguments );
+                    }
+                }
+                this.b( this.e, event, _func );
             },
             off:function( event, func ){
                 this.u( this.e, event, func );
@@ -815,10 +822,14 @@ if( typeof $ == 'undefined' ){
 				if( $( event.target ).hasClass( 'ioselect-selected' ) || $( event.target ).hasClass( 'ioselect-disabled' ) || event.target.tagName == 'INPUT' ){
 					return;
 				}
-				var option = $( event.target ).closest( '.ioselect-option' );
+				var option = $( event.target ).closest( '.ioselect-option,.ioselect-optgroup' );
 				if( option.length == 0 ){
 					return;
 				}
+                if( option.hasClass( 'ioselect-optgroup' ) ){
+                    $( this.e ).trigger( 'optgroup-click', [ option[ 0 ], 'asd' ] );
+                    return;
+                }
 				var value = option[0].getAttribute( 'data-value' );
 				// Update original select
 				if ( this.multiple ) {
@@ -864,28 +875,34 @@ if( typeof $ == 'undefined' ){
 			BuildDropdown: function(){
 				this.ClearSearchTimeout();
 				// Get options
-				var options = this.e.find( 'option' );
+				var options = this.e.find( 'option, optgroup' );
+
 				// Using string and innerHTML is much faster to render
 				// ...than creating individual DOM nodes
 				var options_html = '';
-
+                var optgroup_index = 1;
 				for( var i = 0; i < options.length; i++ ){
 					var option = options[i];
-					// Filter?
-					if( this.filter.length > 0 ){
-						if( !(option.innerText.toLowerCase().indexOf( this.filter.toLowerCase() ) === 0) ){
-							continue;
-						}
-					}
-					var disabled = '';
-					if( option.getAttribute( 'disabled' ) !== null ){
-						disabled = ' ioselect-disabled'
-					}
-					var selected = '';
-					if( option.selected ){
-						selected = ' ioselect-selected';
-					}
-					options_html += '<li class="ioselect-option ioselect-ns' + disabled + selected + '" data-value="' + option.value + '">' + option.text+ '</li>';
+                    var disabled = '';
+                    if( option.getAttribute( 'disabled' ) !== null ){
+                        disabled = ' ioselect-disabled'
+                    }
+                    if( option.nodeName == 'OPTION' ){
+                        // Filter?
+    					if( this.filter.length > 0 ){
+    						if( !(option.innerText.toLowerCase().indexOf( this.filter.toLowerCase() ) === 0) ){
+    							continue;
+    						}
+    					}
+    					var selected = '';
+    					if( option.selected ){
+    						selected = ' ioselect-selected';
+    					}
+    					options_html += '<li class="ioselect-option ioselect-ns' + disabled + selected + '" data-value="' + option.value + '">' + option.text+ '</li>';
+                    } else {
+                        options_html += '<li class="ioselect-optgroup ioselect-ns' + disabled + '" data-ioselect-optgroup-index="' + optgroup_index.toString() + '">' + option.innerText + '</li>';
+                        optgroup_index++;
+                    }
 				}
 
 				this.list.innerHTML = options_html;

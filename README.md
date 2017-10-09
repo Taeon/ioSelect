@@ -9,7 +9,7 @@ Because I was fed up of trying other libraries and finding that they didn't work
 
 ioSelect is:
 
-* Small
+* Small (jQuery version is 9KB minified, <3KB GZIPped)
 * Fast -- initialisation is almost instantaneous, even for selects with thousands of options
 * Dependency-free - that's right, no need for jQuery (or anything like it)
 * Easy to customise (very simple HTML structure, minimal default CSS)

@@ -62,6 +62,12 @@ module.exports = function(grunt) {
                 {
                     src: 'dist/js/ioselect.js',
                     dest: 'dist/js/ioselect.jquery.js',
+                },
+                {
+                    src: 'src/css/*.css',
+                    dest: 'dist/css/',
+                    flatten: true,
+                    expand: true,
                 }
             ],
             options: {

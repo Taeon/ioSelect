@@ -167,7 +167,17 @@
 		}
 		ioselect.prototype = {
             on:function( event, func ){
-                this.bind( this.element, event, func );
+                // We wrap the callback in a function, so that we can pass arguments direct to function
+                var _func = function( event ){
+                    if( typeof event.detail != 'undefined' && $.isArray( event.detail.__args ) ){
+                        var args = [event];
+                        args.push.apply(args, event.detail.__args);
+                        func.apply(null,args);
+                    } else {
+                        func.apply( func, arguments );
+                    }
+                }
+                this.bind( this.element, event, _func );
             },
             off:function( event, func ){
                 this.unbind( this.element, event, func );
@@ -477,10 +487,14 @@
 				if( $( event.target ).hasClass( 'ioselect-selected' ) || $( event.target ).hasClass( 'ioselect-disabled' ) || event.target.tagName == 'INPUT' ){
 					return;
 				}
-				var option = $( event.target ).closest( '.ioselect-option' );
+				var option = $( event.target ).closest( '.ioselect-option,.ioselect-optgroup' );
 				if( option.length == 0 ){
 					return;
 				}
+                if( option.hasClass( 'ioselect-optgroup' ) ){
+                    $( this.element ).trigger( 'optgroup-click', [ option[ 0 ], 'asd' ] );
+                    return;
+                }
 				var value = option[0].getAttribute( 'data-value' );
 				// Update original select
 				if ( this.multiple ) {
@@ -526,28 +540,34 @@
 			BuildDropdown: function(){
 				this.ClearSearchTimeout();
 				// Get options
-				var options = this.element.find( 'option' );
+				var options = this.element.find( 'option, optgroup' );
+
 				// Using string and innerHTML is much faster to render
 				// ...than creating individual DOM nodes
 				var options_html = '';
-
+                var optgroup_index = 1;
 				for( var i = 0; i < options.length; i++ ){
 					var option = options[i];
-					// Filter?
-					if( this.filter.length > 0 ){
-						if( !(option.innerText.toLowerCase().indexOf( this.filter.toLowerCase() ) === 0) ){
-							continue;
-						}
-					}
-					var disabled = '';
-					if( option.getAttribute( 'disabled' ) !== null ){
-						disabled = ' ioselect-disabled'
-					}
-					var selected = '';
-					if( option.selected ){
-						selected = ' ioselect-selected';
-					}
-					options_html += '<li class="ioselect-option ioselect-ns' + disabled + selected + '" data-value="' + option.value + '">' + option.text+ '</li>';
+                    var disabled = '';
+                    if( option.getAttribute( 'disabled' ) !== null ){
+                        disabled = ' ioselect-disabled'
+                    }
+                    if( option.nodeName == 'OPTION' ){
+                        // Filter?
+    					if( this.filter.length > 0 ){
+    						if( !(option.innerText.toLowerCase().indexOf( this.filter.toLowerCase() ) === 0) ){
+    							continue;
+    						}
+    					}
+    					var selected = '';
+    					if( option.selected ){
+    						selected = ' ioselect-selected';
+    					}
+    					options_html += '<li class="ioselect-option ioselect-ns' + disabled + selected + '" data-value="' + option.value + '">' + option.text+ '</li>';
+                    } else {
+                        options_html += '<li class="ioselect-optgroup ioselect-ns' + disabled + '" data-ioselect-optgroup-index="' + optgroup_index.toString() + '">' + option.innerText + '</li>';
+                        optgroup_index++;
+                    }
 				}
 
 				this.list.innerHTML = options_html;
