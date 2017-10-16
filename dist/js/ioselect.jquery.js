@@ -604,7 +604,10 @@
 					if( selected.length == 0 ){
 						var selected = this.e.find( 'option' );
 					}
-					this.select.innerText = selected[0].innerText;
+                    // Might not be any options at all
+                    if( selected.length > 0 ){
+                        this.select.innerText = selected[0].innerText;
+                    }
 				}
 				if( this.e[ 0 ].disabled ){
 					$( this.c ).addClass( 'ioselect-disabled' );
