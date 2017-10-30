@@ -614,6 +614,7 @@
         } else {
           $( this.container ).removeClass( 'ioselect-disabled' );
         }
+        
 			},
 			/**
 			 * Listen for changes to the search input

@@ -611,7 +611,10 @@
 				}
 				if( this.e[ 0 ].disabled ){
 					$( this.c ).addClass( 'ioselect-disabled' );
-    			}
+        } else {
+          $( this.c ).removeClass( 'ioselect-disabled' );
+        }
+        
 			},
 			/**
 			 * Listen for changes to the search input
