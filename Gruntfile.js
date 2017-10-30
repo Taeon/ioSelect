@@ -88,7 +88,13 @@ module.exports = function(grunt) {
         watch: {
             js:{
                 files: ['<%= concat.js.src %>'],
-                tasks: ['concat:js','uglify']
+                tasks: [
+                  'concat:js',
+                  'replace',
+                  'copy',
+                  'insert',
+                  'uglify'
+                ]
             },
             options: {
                 spawn: false,
