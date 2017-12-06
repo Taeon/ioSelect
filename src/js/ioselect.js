@@ -90,17 +90,17 @@
 
 			// The outer container for the replacement selector
 			var parent = $( this.element[ 0 ].parentNode );
-			this.container = parent.find( '.ioselect-container' )[0];
+			this.container = $( container )[0];
 
 			// The dropdown -- we'll build it later
-			this.dropdown = parent.find( '.ioselect-dropdown' )[0];
+			this.dropdown = $( this.container ).find( '.ioselect-dropdown' )[0];
 
-			this.list = parent.find( '.ioselect-dropdown ul' )[0];
-			this.search = parent.find( '.ioselect-dropdown input[type=text]' )[ 0 ];
+			this.list = $( this.dropdown ).find( 'ul' )[0];
+			this.search = $( this.dropdown ).find( 'input[type=text]' )[ 0 ];
 			this.dropdown_built = this.current_selected = false;
 
 			// The replacement select element
-			this.select = parent.find( '.ioselect-select' )[0];
+			this.select = $( this.container ).find( '.ioselect-select' )[0];
 
 			// We append this to the body because otherwise there are issues with
 			// clipping when the select is inside an element with overflow set
@@ -614,7 +614,7 @@
         } else {
           $( this.container ).removeClass( 'ioselect-disabled' );
         }
-        
+
 			},
 			/**
 			 * Listen for changes to the search input
