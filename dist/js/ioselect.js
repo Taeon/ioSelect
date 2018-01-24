@@ -391,17 +391,14 @@ if( typeof $ == 'undefined' ){
 		var ioselect = function( element, options ){
             this.l = [];
 
-            this.o = {
-                search_min: 0
-            }
-
 			$( element ).addClass( 'ioselect-hidden' );
 			this.e = $( element );
             this.is_multiple = typeof this.e[ 0 ].getAttribute( 'multiple' ) != 'undefined' && this.e[ 0 ].getAttribute( 'multiple' ) != null;
 
             this.o = {
                 search_min: 0, // Lower limit for showing seach box. Zero means 'always'
-                search: true // Set to false to never show search box
+                search: true, // Set to false to never show search box
+                mobile_breakpoint: 768 // The width below which the dropdown will be shown fixed-position
             };
 
             // Overwrite options passed in on constructor
@@ -422,9 +419,13 @@ if( typeof $ == 'undefined' ){
             this.o.search = this.o.search && this.o.search !== '0';
 
 			this.e[ 0 ].removeAttribute( 'tabindex' );
-			var container = $( '<div class="ioselect-container"><div class="ioselect-select ioselect-ns' + ((this.multiple)?' ioselect-multiple':'') + '"></div><div class="ioselect-dropdown"><div class="ioselect-search"><input tabindex="-1" type="text" class="ioselect-input" autocorrect="off" autocapitalize="off"></div><ul></ul></div>' );
+			var container = $( '<div class="ioselect-container"><div class="ioselect-select ioselect-ns' + ((this.multiple)?' ioselect-multiple':'') + '"></div><div class="ioselect-dropdown"><div class="ioselect-search"><input tabindex="-1" type="text" class="ioselect-input" autocorrect="off" autocapitalize="off"></div><div class="ioselect-buttons"><button class="ioselect-button-close">Close</button></div><ul></ul></div>' );
 			$( container ).insertBefore( element );
-
+            this.b(
+                container.find( '.ioselect-button-close' )[ 0 ],
+                'click',
+                this.HideDropdown.bind( this )
+            );
 			// The outer container for the replacement selector
 			var parent = $( this.e[ 0 ].parentNode );
 			this.c = $( container )[0];
@@ -584,8 +585,17 @@ if( typeof $ == 'undefined' ){
 			Resize: function(){
 				// To avoid roudning errors...
 				this.c.style.width = 'auto';
-				this.c.style.width = this.c.offsetWidth + 'px';
-				this.d.style.width = this.c.offsetWidth + 'px';
+                if( document.documentElement.clientWidth >= this.o.mobile_breakpoint ){
+                    this.c.style.width = this.c.offsetWidth + 'px';
+    				this.d.style.width = this.c.offsetWidth + 'px';
+                    this.is_mobile = false;
+                    $( this.d ).removeClass( 'ioselect-mobile' );
+                    $( this.c ).removeClass( 'ioselect-mobile' );
+                } else {
+                    this.is_mobile = true;
+                    $( this.d ).addClass( 'ioselect-mobile' );
+                    $( this.c ).addClass( 'ioselect-mobile' );
+                }
 				this.SetDropdownPosition();
 			},
             Reset: function() {
@@ -658,7 +668,7 @@ if( typeof $ == 'undefined' ){
                     ||
                     !this.o.search
                 ){
-                    // Listen for search input
+                    // Hide search box
     				$( this.search ).addClass( 'ioselect-hidden' );
                 } else {
                     // Listen for search input
@@ -669,10 +679,12 @@ if( typeof $ == 'undefined' ){
     				);
                     $( this.search ).removeClass( 'ioselect-hidden' );
                 }
-				this.scroll_listener_interval = setInterval(
-					this.Scroll.bind(this),
-					10
-				)
+                if( !this.is_mobile ){
+                    this.scroll_listener_interval = setInterval(
+    					this.Scroll.bind(this),
+    					10
+    				)
+                }
 
 				// Hide the dropdown on scroll
 				// var parent = this.e.parentNode;
@@ -684,28 +696,36 @@ if( typeof $ == 'undefined' ){
 				this.list.scrollTop = 0;
 
 				this.Resize();
+                if( !this.is_mobile && !$( this.search ).hasClass( 'ioselect-hidden' ) ){
+                    this.search.focus();
+                }
                 $( this.e ).trigger( 'show-dropdown' );
 			},
 			SetDropdownPosition: function(){
-				var position = $( this.c ).offset();
+                if( !this.is_mobile ){
+                    var position = $( this.c ).offset();
 
-				this.current_top = position.top;
+    				this.current_top = position.top;
 
-				this.d.style.top = ( this.current_top + this.select.offsetHeight ).toString() + 'px';
-				this.d.style.left = position.left.toString() + 'px';
+                    this.d.style.top = ( this.current_top + this.select.offsetHeight ).toString() + 'px';
+    				this.d.style.left = position.left.toString() + 'px';
+
+                    // See if it's dropping off the bottom of the screen
+    				var dropdown_top = this.current_top - document.documentElement.scrollTop;
+    				var dropdown_height = this.d.offsetHeight;
+    				var viewport_height = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);;
+    				if ( dropdown_top + dropdown_height > viewport_height ) {
+    					// Put it above the select
+    					this.d.style.top = position.top + 'px';
+    					$( this.c ).addClass( 'ioselect-select-up' );
+    					$( this.d ).addClass( 'ioselect-drop-up' );
+    				}
+                } else {
+                    this.d.style.top = '';
+    				this.d.style.left = '';
+                }
 				$( this.c ).addClass( 'ioselect-open' );
 				$( this.d ).addClass( 'ioselect-open' );
-
-				// See if it's dropping off the bottom of the screen
-				var dropdown_top = this.current_top - document.documentElement.scrollTop;
-				var dropdown_height = this.d.offsetHeight;
-				var viewport_height = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);;
-				if ( dropdown_top + dropdown_height > viewport_height ) {
-					// Put it above the select
-					this.d.style.top = position.top + 'px';
-					$( this.c ).addClass( 'ioselect-select-up' );
-					$( this.d ).addClass( 'ioselect-drop-up' );
-				}
 			},
 			/**
 			 * Hide the dropdown
@@ -821,7 +841,17 @@ if( typeof $ == 'undefined' ){
 			 */
 			ClickOption: function( event ){
 				event.stopPropagation();
-				if( $( event.target ).hasClass( 'ioselect-selected' ) || $( event.target ).hasClass( 'ioselect-disabled' ) || event.target.tagName == 'INPUT' ){
+				if(
+                    (
+                        ( !this.is_multiple )
+                        &&
+                        $( event.target ).hasClass( 'ioselect-selected' )
+                    )
+                    ||
+                    $( event.target ).hasClass( 'ioselect-disabled' )
+                    ||
+                    event.target.tagName == 'INPUT'
+                ){
 					return;
 				}
 				var option = $( event.target ).closest( '.ioselect-option,.ioselect-optgroup' );
@@ -834,7 +864,7 @@ if( typeof $ == 'undefined' ){
                 }
 				var value = option[0].getAttribute( 'data-value' );
 				// Update original select
-				if ( this.multiple ) {
+				if ( this.is_multiple ) {
 					if( value.length == 0 ){
 						return;
 					}
@@ -845,18 +875,28 @@ if( typeof $ == 'undefined' ){
 			        for( var i = 0; i < value.length; i++ ){
 			            var options = this.e.find( 'option[value="' + value[ i ].toString()  + '"]' );
 			            for( var o = 0; o < options.length; o++ ){
-			                options[ o ].selected = true;
+                            if( options[ o ].selected ){
+                                options[ o ].selected = false;
+                                $( event.target ).removeClass( 'ioselect-selected' );
+                            } else {
+                                options[ o ].selected = true;
+                                $( event.target ).addClass( 'ioselect-selected' );
+                            }
 			            }
 			        }
-					$( event.target ).addClass( 'ioselect-selected' );
 			    } else {
 			        var options = this.e.find( 'option[value="' + value.toString()  + '"]' );
+                    $( this.d ).find( '.ioselect-selected' ).removeClass( 'ioselect-selected' );
 			        for( var o = 0; o < options.length; o++ ){
 			            options[ o ].selected = true;
+                        $( event.target ).addClass( 'ioselect-selected' );
 			        }
 			    }
+                if( !this.is_mobile ){
+                    this.HideDropdown();
+                }
+
 				$( this.e ).trigger( 'change' );
-				this.HideDropdown();
 			},
 			/**
 			 * Remove an item from multiple select
@@ -948,10 +988,9 @@ if( typeof $ == 'undefined' ){
 				}
 				if( this.e[ 0 ].disabled ){
 					$( this.c ).addClass( 'ioselect-disabled' );
-        } else {
-          $( this.c ).removeClass( 'ioselect-disabled' );
-        }
-
+                } else {
+                  $( this.c ).removeClass( 'ioselect-disabled' );
+                }
 			},
 			/**
 			 * Listen for changes to the search input
@@ -978,6 +1017,10 @@ if( typeof $ == 'undefined' ){
 				this.search_timeout = null;
 			},
 			Scroll: function(){
+                if( this.is_mobile ){
+                    return;
+                }
+
 				var position = $( this.c ).offset();
 				if( this.current_top !== position.top ){
 					this.HideDropdown();

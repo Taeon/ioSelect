@@ -57,6 +57,12 @@
   position: relative;
   cursor: not-allowed;
 }
+.ioselect-optgroup {
+	font-weight: bold;
+}
+.ioselect-dropdown:not(.ioselect-mobile) .ioselect-buttons {
+	display: none;
+}
 .ioselect-select .ioselect-selected-item:after {
   content: '';
   font-family: 'FontAwesome';
@@ -128,4 +134,17 @@
 .ioselect-dropdown ul li:not(.ioselect-disabled):not(.ioselect-selected):hover {
   background-color: #0088CC;
   color: white;
+}
+
+.ioselect-dropdown.ioselect-mobile{
+	margin: 1vh;
+	width: 98vw;
+	max-height: 98vh;
+	border: 1px solid #0088CC;
+	border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+	padding-top: 4px;
+}
+.ioselect-mask{
+	background-color: rgba( 0,0,0,0.5 );
 }

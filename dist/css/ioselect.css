@@ -42,7 +42,6 @@ If you need margin, apply it to the container instead.
 	padding: 0;
 	overflow: hidden;
 	overflow-y: auto;
-	max-height: 300px;
 	position: relative;
 }
 .ioselect-dropdown ul li{
@@ -86,14 +85,11 @@ If you need margin, apply it to the container instead.
 }
 
 
-@media(max-width:767px){
-	.ioselect-dropdown{
-		position: fixed;
-		transform: none;
-		width: 94%;
-		height: 50%;
-		top: 3% !important;
-		left: 3% !important;
-		max-height: 94vh;
-	}
+.ioselect-dropdown.ioselect-mobile{
+	position: fixed;
+	transform: none;
+	width: 100%;
+	top: 0;
+	left: 0;
+	max-height: 100%;
 }
