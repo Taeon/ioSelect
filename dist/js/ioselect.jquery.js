@@ -375,7 +375,9 @@
 
                     // See if it's dropping off the bottom of the screen
     				var dropdown_top = this.current_top - document.documentElement.scrollTop;
+                    $( this.d ).addClass( 'ioselect-open' );
     				var dropdown_height = this.d.offsetHeight;
+                    $( this.d ).removeClass( 'ioselect-open' );
     				var viewport_height = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);;
     				if ( dropdown_top + dropdown_height > viewport_height ) {
     					// Put it above the select
