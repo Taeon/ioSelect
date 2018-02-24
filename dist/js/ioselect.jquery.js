@@ -50,7 +50,6 @@
 }(
     this,
     function () {
-
 		var ioselect = function( element, options ){
             this.l = [];
 
@@ -61,6 +60,8 @@
             this.o = {
                 search_min: 0, // Lower limit for showing seach box. Zero means 'always'
                 search: true, // Set to false to never show search box
+                search_in_text: false, // Default (false) will only return results that -start- with search text
+                                    // Set to true to return results that -contain- search text.
                 mobile_breakpoint: 768 // The width below which the dropdown will be shown fixed-position
             };
 
@@ -255,6 +256,7 @@
                     $( this.d ).removeClass( 'ioselect-mobile' );
                     $( this.c ).removeClass( 'ioselect-mobile' );
                 } else {
+                    this.d.style.width = '';
                     this.is_mobile = true;
                     $( this.d ).addClass( 'ioselect-mobile' );
                     $( this.c ).addClass( 'ioselect-mobile' );
@@ -597,7 +599,7 @@
                     if( option.nodeName == 'OPTION' ){
                         // Filter?
     					if( this.filter.length > 0 ){
-    						if( !(option.innerText.toLowerCase().indexOf( this.filter.toLowerCase() ) === 0) ){
+    						if( !this.ApplySearchFilter( option.innerText ) ){
     							continue;
     						}
     					}
@@ -605,7 +607,7 @@
     					if( option.selected ){
     						selected = ' ioselect-selected';
     					}
-    					options_html += '<li class="ioselect-option ioselect-ns' + disabled + selected + '" data-value="' + option.value + '">' + option.text+ '</li>';
+    					options_html += '<li class="ioselect-option ioselect-ns' + disabled + selected + '" data-value="' + option.value + '">' + ((option.text != '')?option.text:'&nbsp;') + '</li>';
                     } else {
                         options_html += '<li class="ioselect-optgroup ioselect-ns' + disabled + '" data-ioselect-optgroup-index="' + optgroup_index.toString() + '">' + option.innerText + '</li>';
                         optgroup_index++;
@@ -617,6 +619,13 @@
 				this.d_built = true;
 				this.list.scrollTop = 0;
 			},
+            ApplySearchFilter:function( text ){
+                if( this.o.search_in_text ){
+                    return ( text.toLowerCase().indexOf( this.filter.toLowerCase() ) !== -1 );
+                } else {
+                    return ( text.toLowerCase().indexOf( this.filter.toLowerCase() ) === 0 );
+                }
+            },
 			Update: function(){
 				this.d_built = false;
 				this.UpdateSelect();
@@ -633,7 +642,7 @@
 					var values = '';
 			        for( var i = 0; i < selected.length; i++ ){
 			            if ( selected[ i ].hasAttribute( 'value' ) ) {
-			                values += '<span class="ioselect-selected-item">' + selected[ i ].innerText + '</span>';
+			                values += '<span class="ioselect-selected-item">' + ((selected[ i ].innerText != '')?selected[ i ].innerText:'&nbsp;') + '</span>';
 			            }
 			        }
 					this.select.innerHTML = values;
@@ -648,7 +657,7 @@
 					}
                     // Might not be any options at all
                     if( selected.length > 0 ){
-                        this.select.innerText = selected[0].innerText;
+                        this.select.innerHTML = (selected[0].innerText!='')?selected[0].innerText:'&nbsp;';
                     }
 				}
 				if( this.e[ 0 ].disabled ){

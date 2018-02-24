@@ -61,7 +61,7 @@
                 search_min: 0, // Lower limit for showing seach box. Zero means 'always'
                 search: true, // Set to false to never show search box
                 search_in_text: false, // Default (false) will only return results that -start- with search text
-                                        // Set to true to return results that -contain- search text.
+                                    // Set to true to return results that -contain- search text.
                 mobile_breakpoint: 768 // The width below which the dropdown will be shown fixed-position
             };
 
