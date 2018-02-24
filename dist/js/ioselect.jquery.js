@@ -50,6 +50,8 @@
 }(
     this,
     function () {
+// Below is a marker for inserting NINJA. Do not remove. 
+
 		var ioselect = function( element, options ){
             this.l = [];
 
