@@ -28,6 +28,9 @@
   height: 100%;
   color: #4C5365;
 }
+.ioselect-container.ioselect-open{
+	z-index: 10000;
+}
 .ioselect-container.ioselect-open .ioselect-select {
   border-color: #0088CC;
   box-shadow: 0 4px 5px rgba(0, 0, 0, 0.15);
@@ -146,5 +149,5 @@
 	padding-top: 4px;
 }
 .ioselect-mask{
-	background-color: rgba( 0,0,0,0.5 );
+	/* background-color: rgba( 0,0,0,0.5 ); */
 }
