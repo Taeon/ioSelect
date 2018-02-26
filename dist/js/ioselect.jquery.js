@@ -232,9 +232,9 @@
              */
             SelectMutated: function( mutations ){
 				for( var i = 0; i < mutations.length; i++ ){
-                    this.HideDropdown();
 					switch( mutations[i].type ){
 						case 'childList':{
+                            this.HideDropdown();
 							this.Update();
 							break;
 						}
@@ -662,6 +662,7 @@
 				}
 				if( this.e[ 0 ].disabled ){
 					$( this.c ).addClass( 'ioselect-disabled' );
+                    this.HideDropdown();
                 } else {
                   $( this.c ).removeClass( 'ioselect-disabled' );
                 }
