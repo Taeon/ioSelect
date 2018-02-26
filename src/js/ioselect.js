@@ -249,19 +249,17 @@
              * Called when window is resized
              */
 			Resize: function(){
-				// To avoid roudning errors...
+				// To avoid rounding errors...
 				this.container.style.width = 'auto';
                 if( document.documentElement.clientWidth >= this.options.mobile_breakpoint ){
                     this.container.style.width = this.container.offsetWidth + 'px';
     				this.dropdown.style.width = this.container.offsetWidth + 'px';
                     this.is_mobile = false;
-                    $( this.dropdown ).removeClass( 'ioselect-mobile' );
-                    $( this.container ).removeClass( 'ioselect-mobile' );
+                    $( [this.dropdown,this.container,this.mask] ).removeClass( 'ioselect-mobile' );
                 } else {
                     this.dropdown.style.width = '';
                     this.is_mobile = true;
-                    $( this.dropdown ).addClass( 'ioselect-mobile' );
-                    $( this.container ).addClass( 'ioselect-mobile' );
+                    $( [this.dropdown,this.container,this.mask] ).addClass( 'ioselect-mobile' );
                 }
 				this.SetDropdownPosition();
 			},

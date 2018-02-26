@@ -50,7 +50,7 @@
 }(
     this,
     function () {
-// Below is a marker for inserting NINJA. Do not remove. 
+// Below is a marker for inserting NINJA. Do not remove.
 
 		var ioselect = function( element, options ){
             this.l = [];
@@ -249,19 +249,17 @@
              * Called when window is resized
              */
 			Resize: function(){
-				// To avoid roudning errors...
+				// To avoid rounding errors...
 				this.c.style.width = 'auto';
                 if( document.documentElement.clientWidth >= this.o.mobile_breakpoint ){
                     this.c.style.width = this.c.offsetWidth + 'px';
     				this.d.style.width = this.c.offsetWidth + 'px';
                     this.is_mobile = false;
-                    $( this.d ).removeClass( 'ioselect-mobile' );
-                    $( this.c ).removeClass( 'ioselect-mobile' );
+                    $( [this.d,this.c,this.mask] ).removeClass( 'ioselect-mobile' );
                 } else {
                     this.d.style.width = '';
                     this.is_mobile = true;
-                    $( this.d ).addClass( 'ioselect-mobile' );
-                    $( this.c ).addClass( 'ioselect-mobile' );
+                    $( [this.d,this.c,this.mask] ).addClass( 'ioselect-mobile' );
                 }
 				this.SetDropdownPosition();
 			},
