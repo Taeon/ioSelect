@@ -334,7 +334,7 @@
                     !this.options.search
                 ){
                     // Hide search box
-    				$( this.search ).addClass( 'ioselect-hidden' );
+    				$( this.search ).closest( '.ioselect-search' ).addClass( 'ioselect-hidden' );
                 } else {
                     // Listen for search input
     				this.bind(
@@ -342,7 +342,7 @@
     					'input',
     					this.Search.bind(this)
     				);
-                    $( this.search ).removeClass( 'ioselect-hidden' );
+                    $( this.search ).closest( '.ioselect-search' ).removeClass( 'ioselect-hidden' );
                 }
                 if( !this.is_mobile ){
                     this.scroll_listener_interval = setInterval(
@@ -361,7 +361,7 @@
 				this.list.scrollTop = 0;
 
 				this.Resize();
-                if( !this.is_mobile && !$( this.search ).hasClass( 'ioselect-hidden' ) ){
+                if( !this.is_mobile && !$( this.search ).closest( '.ioselect-search' ).hasClass( 'ioselect-hidden' ) ){
                     this.search.focus();
                 }
                 $( this.element ).trigger( 'show-dropdown' );
