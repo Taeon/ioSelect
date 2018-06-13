@@ -658,6 +658,8 @@
                     // Might not be any options at all
                     if( selected.length > 0 ){
                         this.select.innerHTML = (selected[0].innerText!='')?selected[0].innerText:'&nbsp;';
+                    } else {
+                        this.select.innerHTML = '&nbsp;';
                     }
 				}
 				if( this.e[ 0 ].disabled ){
