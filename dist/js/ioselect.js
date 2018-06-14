@@ -975,6 +975,7 @@ if( typeof $ == 'undefined' ){
                 // an infinite loop on the MutationObserver
                 // so querySelectorAll will have to do
     			var selected = this.e[ 0 ].querySelectorAll( 'option:checked' );
+                $( this.select ).removeClass( 'ioselect-placeholder' );
 				if ( this.is_multiple ) {
 					var values = '';
 			        for( var i = 0; i < selected.length; i++ ){
