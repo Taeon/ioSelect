@@ -1001,6 +1001,7 @@ if( typeof $ == 'undefined' ){
                         text = '&nbsp;';
                         if( this.e[ 0 ].getAttribute( 'placeholder' ) ){
                             text = this.e[ 0 ].getAttribute( 'placeholder' );
+                            $( this.select ).addClass( 'ioselect-placeholder' );
                         }
                     }
                     this.select.innerHTML = text;

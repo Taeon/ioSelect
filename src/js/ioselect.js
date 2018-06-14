@@ -664,6 +664,7 @@
                         text = '&nbsp;';
                         if( this.element[ 0 ].getAttribute( 'placeholder' ) ){
                             text = this.element[ 0 ].getAttribute( 'placeholder' );
+                            $( this.select ).addClass( 'ioselect-placeholder' );
                         }
                     }
                     this.select.innerHTML = text;
