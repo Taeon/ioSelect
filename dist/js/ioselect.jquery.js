@@ -651,16 +651,23 @@
 						this.b( items[ i ], 'click', this.RemoveSelectedItem.bind( this ) );
 					}
 				} else {
+                    var text = '';
 					// None selected, use first
 					if( selected.length == 0 ){
 						var selected = this.e.find( 'option' );
-					}
+                    }
                     // Might not be any options at all
                     if( selected.length > 0 ){
-                        this.select.innerHTML = (selected[0].innerText!='')?selected[0].innerText:'&nbsp;';
-                    } else {
-                        this.select.innerHTML = '&nbsp;';
+                        var text = selected[0].innerText;
                     }
+                    if( text == '' ){
+                        text = '&nbsp;';
+                        if( this.e[ 0 ].getAttribute( 'placeholder' ) ){
+                            text = this.e[ 0 ].getAttribute( 'placeholder' );
+                        }
+                    }
+                    this.select.innerHTML = text;
+
 				}
 				if( this.e[ 0 ].disabled ){
 					$( this.c ).addClass( 'ioselect-disabled' );
