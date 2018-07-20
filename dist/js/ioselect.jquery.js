@@ -597,6 +597,10 @@
                         disabled = ' ioselect-disabled'
                     }
                     if( option.nodeName == 'OPTION' ){
+                        // Don't show blank options
+                        if ( this.is_multiple && option.value.trim() == '' ) {
+                            continue;
+                        }
                         // Filter?
     					if( this.filter.length > 0 ){
     						if( !this.ApplySearchFilter( option.innerText ) ){
@@ -642,7 +646,7 @@
 				if ( this.is_multiple ) {
 					var values = '';
 			        for( var i = 0; i < selected.length; i++ ){
-			            if ( selected[ i ].hasAttribute( 'value' ) ) {
+                        if ( selected[ i ].hasAttribute( 'value' ) && selected[ i ].getAttribute( 'value' ).trim() != '' ) {
 			                values += '<span class="ioselect-selected-item">' + ((selected[ i ].innerText != '')?selected[ i ].innerText:'&nbsp;') + '</span>';
 			            }
 			        }
