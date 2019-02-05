@@ -1,13 +1,13 @@
-// TODO: display dropdown fullscreen on mobile
-// TODO: events
-// TODO: OPTGROUP support
-// TODO: respond to select focus (tabindex)
+// x TODO: display dropdown fullscreen on mobile
+// x TODO: events
+// x TODO: OPTGROUP support
+// x TODO: respond to select focus (tabindex)
 
 // Possible features...
-// TODO: No results text
-// TODO: limit number of selections in select multiple
-// TODO: focus on label click
-// TODO: deselect on single select (i.e. set to first blank option)?
+// x TODO: No results text
+// x TODO: limit number of selections in select multiple
+// x TODO: focus on label click
+// x TODO: deselect on single select (i.e. set to first blank option)?
 
 
 /**
@@ -623,6 +623,9 @@
 				this.dropdown_built = true;
 				this.list.scrollTop = 0;
 			},
+            GetDropdown:function(){
+                return this.dropdown;
+            },
             ApplySearchFilter:function( text ){
                 if( this.options.search_in_text ){
                     return ( text.toLowerCase().indexOf( this.filter.toLowerCase() ) !== -1 );
