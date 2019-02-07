@@ -589,8 +589,8 @@ if( typeof $ == 'undefined' ){
 				// To avoid rounding errors...
 				this.c.style.width = 'auto';
                 if( document.documentElement.clientWidth >= this.o.mobile_breakpoint ){
-                    this.c.style.width = this.c.offsetWidth + 'px';
-    				this.d.style.width = this.c.offsetWidth + 'px';
+                    // Uses getBoundingClientRect().width because this includes decimal places, avoids visual disjoint from rounding
+    				this.d.style.width = this.c.getBoundingClientRect().width + 'px';
                     this.is_mobile = false;
                     $( [this.d,this.c,this.mask] ).removeClass( 'ioselect-mobile' );
                 } else {
