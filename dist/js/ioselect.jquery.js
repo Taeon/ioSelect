@@ -99,6 +99,12 @@
 			// The dropdown -- we'll build it later
 			this.d = $( this.c ).find( '.ioselect-dropdown' )[0];
 
+			// Add instance-specific class?
+			var dropdown_class = this.e[ 0 ].getAttribute( 'data-ioselect-dropdown-class' );
+			if( dropdown_class != null ){
+				$( this.d ).addClass( dropdown_class );
+			}
+			
 			this.list = $( this.d ).find( 'ul' )[0];
 			this.search = $( this.d ).find( 'input[type=text]' )[ 0 ];
 			this.d_built = this.current_selected = false;

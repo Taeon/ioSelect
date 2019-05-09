@@ -99,6 +99,12 @@
 			// The dropdown -- we'll build it later
 			this.dropdown = $( this.container ).find( '.ioselect-dropdown' )[0];
 
+			// Add instance-specific class?
+			var dropdown_class = this.element[ 0 ].getAttribute( 'data-ioselect-dropdown-class' );
+			if( dropdown_class != null ){
+				$( this.dropdown ).addClass( dropdown_class );
+			}
+			
 			this.list = $( this.dropdown ).find( 'ul' )[0];
 			this.search = $( this.dropdown ).find( 'input[type=text]' )[ 0 ];
 			this.dropdown_built = this.current_selected = false;
@@ -253,7 +259,7 @@
 				this.container.style.width = 'auto';
                 if( document.documentElement.clientWidth >= this.options.mobile_breakpoint ){
                     // Uses getBoundingClientRect().width because this includes decimal places, avoids visual disjoint from rounding
-    				this.d.style.width = this.c.getBoundingClientRect().width + 'px';
+    				this.dropdown.style.width = this.container.getBoundingClientRect().width + 'px';
                     this.is_mobile = false;
                     $( [this.dropdown,this.container,this.mask] ).removeClass( 'ioselect-mobile' );
                 } else {
