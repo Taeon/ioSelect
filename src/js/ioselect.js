@@ -653,16 +653,23 @@
     			var selected = this.element[ 0 ].querySelectorAll( 'option:checked' );
                 $( this.select ).removeClass( 'ioselect-placeholder' );
 				if ( this.is_multiple ) {
-					var values = '';
-			        for( var i = 0; i < selected.length; i++ ){
-                        if ( selected[ i ].hasAttribute( 'value' ) && selected[ i ].getAttribute( 'value' ).trim() != '' ) {
-			                values += '<span class="ioselect-selected-item">' + ((selected[ i ].innerText != '')?selected[ i ].innerText:'&nbsp;') + '</span>';
-			            }
-			        }
-					this.select.innerHTML = values;
-					var items = $( this.select ).find( '.ioselect-selected-item' );
-					for( var i = 0; i < items.length; i++ ){
-						this.bind( items[ i ], 'click', this.RemoveSelectedItem.bind( this ) );
+					if( selected.length > 0 ){
+						var values = '';
+						for( var i = 0; i < selected.length; i++ ){
+							if ( selected[ i ].hasAttribute( 'value' ) && selected[ i ].getAttribute( 'value' ).trim() != '' ) {
+								values += '<span class="ioselect-selected-item">' + ((selected[ i ].innerText != '')?selected[ i ].innerText:'&nbsp;') + '</span>';
+							}
+						}
+						this.select.innerHTML = values;
+						var items = $( this.select ).find( '.ioselect-selected-item' );
+						for( var i = 0; i < items.length; i++ ){
+							this.bind( items[ i ], 'click', this.RemoveSelectedItem.bind( this ) );
+						}
+					} else{
+                        if( this.element[ 0 ].getAttribute( 'placeholder' ) ){
+                            this.select.innerText = this.element[ 0 ].getAttribute( 'placeholder' );
+                            $( this.select ).addClass( 'ioselect-placeholder' );
+                        }
 					}
 				} else {
                     var text = '';
