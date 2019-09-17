@@ -64,7 +64,8 @@
                 search: true, // Set to false to never show search box
                 search_in_text: false, // Default (false) will only return results that -start- with search text
                                     // Set to true to return results that -contain- search text.
-                mobile_breakpoint: 768 // The width below which the dropdown will be shown fixed-position
+                mobile_breakpoint: 768, // The width below which the dropdown will be shown fixed-position
+                close_on_click_mobile: false, // Whether the dropdown will close when an option is selected (on mobile)
             };
 
             // Overwrite options passed in on constructor
@@ -79,11 +80,13 @@
             [].slice.call(this.element[0].attributes).filter(function(attr) {
             	return attr && attr.name && attr.name.indexOf('data-ioselect-') === 0
             }).forEach(function(attr) {
-            	this.options[attr.name.substr(14).replace( /\-/, '_' )] = attr.value;
+            	this.options[attr.name.substr(14).replace( /\-/g, '_' )] = attr.value;
             }.bind(this));
             this.options.search_min = parseInt( this.options.search_min );
             this.options.search = this.options.search && this.options.search !== '0';
-
+			if( typeof this.options.close_on_click_mobile === "string" ){
+				this.options.close_on_click_mobile = !(this.options.close_on_click_mobile==="false");
+			}
 			this.element[ 0 ].removeAttribute( 'tabindex' );
 			var container = $( '<div class="ioselect-container"><div class="ioselect-select ioselect-ns' + ((this.is_multiple)?' ioselect-multiple':'') + '"></div><div class="ioselect-dropdown"><div class="ioselect-search"><input tabindex="-1" type="text" class="ioselect-input" autocorrect="off" autocapitalize="off"></div><div class="ioselect-buttons"><button class="ioselect-button-close">Close</button></div><ul></ul></div>' );
 			$( container ).insertBefore( element );
@@ -565,7 +568,8 @@
                         $( event.target ).addClass( 'ioselect-selected' );
 			        }
 			    }
-                if( !this.is_mobile ){
+
+				if( ( !this.is_mobile ) || this.options.close_on_click_mobile ){
                     this.HideDropdown();
                 }
 

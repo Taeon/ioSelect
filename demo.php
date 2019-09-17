@@ -66,7 +66,7 @@ console.log(end-start);
 					<option value="bananas">Bananas</option>
 				</select>
 				<div style="position: absolute; left: 200px; top: 200px; height: 500px; width:43.6284333%; margin-right: 5%;">
-				<select id="first" class="ioselect">
+				<select id="first" class="ioselect" data-ioselect-dropdown-class="foobar" data-ioselect-close-on-click-mobile="false">
 					<option value=""></option>
 <?php
 for( $i = 0; $i < 1000; $i++  ){
