@@ -673,7 +673,9 @@
                         if( this.e[ 0 ].getAttribute( 'placeholder' ) ){
                             this.select.innerText = this.e[ 0 ].getAttribute( 'placeholder' );
                             $( this.select ).addClass( 'ioselect-placeholder' );
-                        }
+                        } else {
+							this.select.innerText = '';
+						}
 					}
 				} else {
                     var text = '';
