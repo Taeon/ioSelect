@@ -87,7 +87,7 @@
 			if( typeof this.options.close_on_click_mobile === "string" ){
 				this.options.close_on_click_mobile = !(this.options.close_on_click_mobile==="false");
 			}
-			//this.element[ 0 ].removeAttribute( 'tabindex' );
+            //this.element[ 0 ].removeAttribute( 'tabindex' );
 			var container = $( '<div class="ioselect-container"><div class="ioselect-select ioselect-ns' + ((this.is_multiple)?' ioselect-multiple':'') + '"></div><div class="ioselect-dropdown"><div class="ioselect-search"><input tabindex="-1" type="text" class="ioselect-input" autocorrect="off" autocapitalize="off"></div><div class="ioselect-buttons"><button class="ioselect-button-close">Close</button></div><ul></ul></div>' );
 			$( container ).insertBefore( element );
             this.bind(
