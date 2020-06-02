@@ -613,7 +613,7 @@
                         }
                         // Filter?
     					if( this.filter.length > 0 ){
-    						if( !this.ApplySearchFilter( option.innerText ) ){
+    						if( !this.ApplySearchFilter( option.text ) ){
     							continue;
     						}
     					}
@@ -661,7 +661,7 @@
 						var values = '';
 						for( var i = 0; i < selected.length; i++ ){
 							if ( selected[ i ].hasAttribute( 'value' ) && selected[ i ].getAttribute( 'value' ).trim() != '' ) {
-								values += '<span class="ioselect-selected-item">' + ((selected[ i ].innerText != '')?selected[ i ].innerText:'&nbsp;') + '</span>';
+								values += '<span class="ioselect-selected-item">' + ((selected[ i ].text != '')?selected[ i ].text:'&nbsp;') + '</span>';
 							}
 						}
 						this.select.innerHTML = values;
@@ -685,7 +685,7 @@
                     }
                     // Might not be any options at all
                     if( selected.length > 0 ){
-                        var text = selected[0].innerText;
+                        var text = selected[0].text;
                     }
                     if( text == '' ){
                         text = '&nbsp;';
