@@ -264,7 +264,7 @@
                 if( 
                     document.documentElement.clientWidth >= this.options.mobile_breakpoint 
                     &&
-                    document.documentElement.clientWidth >= this.options.mobile_breakpoint_vertical
+                    document.documentElement.clientHeight >= this.options.mobile_breakpoint_vertical
                 ){
                     // Uses getBoundingClientRect().width because this includes decimal places, avoids visual disjoint from rounding
     				this.dropdown.style.width = this.container.getBoundingClientRect().width + 'px';

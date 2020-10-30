@@ -601,7 +601,7 @@ if( typeof $ == 'undefined' ){
                 if( 
                     document.documentElement.clientWidth >= this.o.mobile_breakpoint 
                     &&
-                    document.documentElement.clientWidth >= this.o.mobile_breakpoint_vertical
+                    document.documentElement.clientHeight >= this.o.mobile_breakpoint_vertical
                 ){
                     // Uses getBoundingClientRect().width because this includes decimal places, avoids visual disjoint from rounding
     				this.d.style.width = this.c.getBoundingClientRect().width + 'px';
