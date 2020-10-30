@@ -65,6 +65,7 @@
                 search_in_text: false, // Default (false) will only return results that -start- with search text
                                     // Set to true to return results that -contain- search text.
                 mobile_breakpoint: 768, // The width below which the dropdown will be shown fixed-position
+                mobile_breakpoint_vertical: 600, // The height below which the dropdown will be shown fixed-position
                 close_on_click_mobile: false, // Whether the dropdown will close when an option is selected (on mobile)
             };
 
@@ -260,7 +261,11 @@
 			Resize: function(){
 				// To avoid rounding errors...
 				this.c.style.width = 'auto';
-                if( document.documentElement.clientWidth >= this.o.mobile_breakpoint ){
+                if( 
+                    document.documentElement.clientWidth >= this.o.mobile_breakpoint 
+                    &&
+                    document.documentElement.clientWidth >= this.o.mobile_breakpoint_vertical
+                ){
                     // Uses getBoundingClientRect().width because this includes decimal places, avoids visual disjoint from rounding
     				this.d.style.width = this.c.getBoundingClientRect().width + 'px';
                     this.is_mobile = false;
