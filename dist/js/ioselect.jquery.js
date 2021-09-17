@@ -67,6 +67,8 @@
                 mobile_breakpoint: 768, // The width below which the dropdown will be shown fixed-position
                 mobile_breakpoint_vertical: 600, // The height below which the dropdown will be shown fixed-position
                 close_on_click_mobile: false, // Whether the dropdown will close when an option is selected (on mobile)
+                dropdown_match_select_width: true, // If ture, the width of the dropdown will always be the same as the width of the select field
+                value_format_function:function( text, value, ioselect ){ return ((text != '')?text:'&nbsp;') } // Use this to change the value that's displayed when an item is selected
             };
 
             // Overwrite options passed in on constructor
@@ -267,7 +269,9 @@
                     document.documentElement.clientHeight >= this.o.mobile_breakpoint_vertical
                 ){
                     // Uses getBoundingClientRect().width because this includes decimal places, avoids visual disjoint from rounding
-    				this.d.style.width = this.c.getBoundingClientRect().width + 'px';
+                    if( this.o.dropdown_match_select_width ){
+                        this.d.style.width = this.c.getBoundingClientRect().width + 'px';
+                    }
                     this.is_mobile = false;
                     $( [this.d,this.c,this.mask] ).removeClass( 'ioselect-mobile' );
                 } else {
@@ -666,7 +670,7 @@
 						var values = '';
 						for( var i = 0; i < selected.length; i++ ){
 							if ( selected[ i ].hasAttribute( 'value' ) && selected[ i ].getAttribute( 'value' ).trim() != '' ) {
-								values += '<span class="ioselect-selected-item">' + ((selected[ i ].text != '')?selected[ i ].text:'&nbsp;') + '</span>';
+								values += '<span class="ioselect-selected-item">' + this.o.value_format_function( selected[ i ].text, selected[ i ].value, this ) + '</span>';
 							}
 						}
 						this.select.innerHTML = values;
@@ -690,7 +694,7 @@
                     }
                     // Might not be any options at all
                     if( selected.length > 0 ){
-                        var text = selected[0].text;
+                        var text = this.o.value_format_function( selected[ 0 ].text, selected[ 0 ].value, this );
                     }
                     if( text == '' ){
                         text = '&nbsp;';

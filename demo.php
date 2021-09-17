@@ -50,7 +50,7 @@ console.log(end-start);
 		}
 		</script>
 	</head>
-	<body>
+	<body style="min-height:200vh">
 		<h1>ioSelect</h1>
 		<p>ioSelect is an easily-customisable replacement for the HTML select element.</p>
 		<h2>Simple initalisation</h2>
