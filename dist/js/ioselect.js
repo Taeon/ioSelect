@@ -522,7 +522,7 @@ if( typeof $ == 'undefined' ){
             on:function( event, func ){
                 // We wrap the callback in a function, so that we can pass arguments direct to function
                 var _func = function( event ){
-                    if( typeof event.detail != 'undefined' && $.isArray( event.detail.__args ) ){
+                    if( typeof event.detail != 'undefined' && event.detail !== null && $.isArray( event.detail.__args ) ){
                         var args = [event];
                         args.push.apply(args, event.detail.__args);
                         func.apply(null,args);
