@@ -67,7 +67,8 @@
                 mobile_breakpoint: 768, // The width below which the dropdown will be shown fixed-position
                 mobile_breakpoint_vertical: 600, // The height below which the dropdown will be shown fixed-position
                 close_on_click_mobile: false, // Whether the dropdown will close when an option is selected (on mobile)
-                dropdown_match_select_width: true, // If ture, the width of the dropdown will always be the same as the width of the select field
+                dropdown_match_select_width: true, // If true, the width of the dropdown will always be the same as the width of the select field
+                dropdown_match_select_min_width: true, // If true, the min-width of the dropdown will always be the same as the width of the select field
                 value_format_function:function( text, value, ioselect ){ return ((text != '')?text:'&nbsp;') } // Use this to change the value that's displayed when an item is selected
             };
 
@@ -271,6 +272,9 @@
                     // Uses getBoundingClientRect().width because this includes decimal places, avoids visual disjoint from rounding
                     if( this.options.dropdown_match_select_width ){
                         this.dropdown.style.width = this.container.getBoundingClientRect().width + 'px';
+                    }
+                    if( this.options.dropdown_match_select_min_width ){
+                        this.dropdown.style.minWidth = this.container.getBoundingClientRect().width + 'px';
                     }
                     this.is_mobile = false;
                     $( [this.dropdown,this.container,this.mask] ).removeClass( 'ioselect-mobile' );
