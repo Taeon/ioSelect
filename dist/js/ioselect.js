@@ -789,6 +789,7 @@ if( typeof $ == 'undefined' ){
 					this.filter = '';
 					// Dropdown will need to be rebuilt next time
 					this.d_built = false;
+                    $( this.e ).trigger( 'destroy-dropdown' );
 				}
 				// Remove key event listeners
 				this.u(
@@ -995,6 +996,7 @@ if( typeof $ == 'undefined' ){
             },
 			Update: function(){
 				this.d_built = false;
+                $( this.e ).trigger( 'destroy-dropdown' );
 				this.UpdateSelect();
 			},
 			/**

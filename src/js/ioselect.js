@@ -452,6 +452,7 @@
 					this.filter = '';
 					// Dropdown will need to be rebuilt next time
 					this.dropdown_built = false;
+                    $( this.element ).trigger( 'destroy-dropdown' );
 				}
 				// Remove key event listeners
 				this.unbind(
@@ -658,6 +659,7 @@
             },
 			Update: function(){
 				this.dropdown_built = false;
+                $( this.element ).trigger( 'destroy-dropdown' );
 				this.UpdateSelect();
 			},
 			/**
