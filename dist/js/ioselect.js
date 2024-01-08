@@ -972,7 +972,11 @@ if( typeof $ == 'undefined' ){
     					if( option.selected ){
     						selected = ' ioselect-selected';
     					}
-    					options_html += '<li class="ioselect-option ioselect-ns' + disabled + selected + '" data-value="' + option.value + '">' + ((option.text != '')?option.text:'&nbsp;') + '</li>';
+                        var custom_class = '';
+                        if( option.getAttribute( 'data-ioselect-class' ) !== null ){
+                            custom_class += ' ' + option.getAttribute( 'data-ioselect-class' );
+                        }
+    					options_html += '<li class="ioselect-option ioselect-ns' + disabled + selected + custom_class + '" data-value="' + option.value + '">' + ((option.text != '')?option.text:'&nbsp;') + '</li>';
                     } else {
                         options_html += '<li class="ioselect-optgroup ioselect-ns' + disabled + '" data-ioselect-optgroup-index="' + optgroup_index.toString() + '">' + option.innerText + '</li>';
                         optgroup_index++;
